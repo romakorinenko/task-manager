@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Создание задачи</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .delete-button {
+            background-color: #f44336;
+        }
+        .delete-button:hover {
+            background-color: #e53935;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Создание задачи</h1>
+
+<form action="http://localhost:8080/tasks" method="POST">
+    <label for="Title">Название:</label>
+    <input type="text" id="Title" name="Title">
+
+    <label for="Description">Описание:</label>
+    <input type="text" id="Description" name="Description">
+
+    <label for="Priority">Приоритет:</label>
+    <select id="Priority" name="Priority" required>
+        <option value="" disabled selected>Выберите приоритет</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+    </select>
+
+    <label for="UserLogin">Пользователь:</label>
+    <select id="UserLogin" name="UserLogin" required>
+        <option value="" disabled selected>Выберите приоритет</option>
+        {{range .Users }}
+        <option value="{{.Login}}">{{.Login}}</option>
+        {{end}}
+    </select>
+
+
+    <button type="submit">Создать задачу</button>
+</form>
+
+</body>
+</html>
+

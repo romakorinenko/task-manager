@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Таблица с задачами</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+        tr:hover {
+            background-color: #f2f2f2;
+            cursor: pointer;
+        }
+        .button {
+            margin-top: 20px; /* Отступ сверху для кнопки */
+            padding: 10px 15px;
+            background-color: #4CAF50; /* Цвет кнопки */
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #45a049; /* Цвет кнопки при наведении */
+        }
+    </style>
+</head>
+<body>
+<h1>Задачи</h1>
+<table>
+    <thead>
+    <tr>
+        <th>Номер задачи</th>
+        <th>Название</th>
+        <th>Описание</th>
+        <th>Приоритет</th>
+        <th>Статус</th>
+        <th>Создана</th>
+        <th>Обновлена</th>
+        <th>Пользователь</th>
+    </tr>
+    </thead>
+    <tbody>
+    {{range .Tasks}}
+    <tr onclick="window.location='http://localhost:8080/tasks/{{.ID}}';">
+        <td>{{.ID}}</td>
+        <td>{{.Title}}</td>
+        <td>{{.Description}}</td>
+        <td>{{.Priority}}</td>
+        <td>{{.Status}}</td>
+        <td>{{.CreatedAt}}</td>
+        <td>{{.UpdatedAt}}</td>
+        <td>{{.UserLogin}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+</table>
+
+<button class="button" onclick="window.location='http://localhost:8080/tasks/create';">Добавить новую задачу</button>
+
+</body>
+</html>
+

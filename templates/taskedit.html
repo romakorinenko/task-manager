@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактирование задачи</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .delete-button {
+            background-color: #f44336;
+        }
+        .delete-button:hover {
+            background-color: #e53935;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Редактирование задачи {{.ID}}</h1>
+
+<form action="http://localhost:8080/tasks/{{.ID}}" method="POST">
+    <label for="ID">Номер задачи:</label>
+    <input type="text" id="ID" name="ID" value="{{.ID}}" readonly>
+
+    <label for="Title">Название:</label>
+    <input type="text" id="Title" name="Title" value="{{.Title}}">
+
+    <label for="Description">Описание:</label>
+    <input type="text" id="Description" name="Description" value="{{.Description}}">
+
+    <label for="Priority">Приоритет:</label>
+    <input type="text" id="Priority" name="Priority" value="{{.Priority}}">
+
+    <label for="Status">Статус:</label>
+    <input type="text" id="Status" name="Status" value="{{.Status}}">
+
+    <label for="CreatedAt">Создана:</label>
+    <input type="text" id="CreatedAt" name="CreatedAt" value="{{.CreatedAt}}" readonly>
+
+    <label for="UpdatedAt">Обновлена:</label>
+    <input type="text" id="UpdatedAt" name="UpdatedAt" value="{{.UpdatedAt}}" readonly>
+
+    <label for="UserLogin">Пользователь:</label>
+    <input type="text" id="UserLogin" name="UserLogin" value="{{.UserLogin}}" readonly>
+
+    <button type="submit">Обновить</button>
+</form>
+
+
+<form action="http://localhost:8080/tasks/{{.ID}}/delete" method="POST" style="display:inline;">
+    <input type="hidden" name="_method" value="DELETE">
+    <button type="submit" class="delete-button">Удалить задачу {{.ID}}</button>
+</form>
+
+</body>
+</html>
+
