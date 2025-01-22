@@ -2,19 +2,15 @@ package controller
 
 import (
 	"fmt"
-	"github.com/gin-gonic/contrib/sessions"
-	"github.com/gin-gonic/gin"
-	"github.com/romakorinenko/task-manager/internal/repository"
-	"github.com/romakorinenko/task-manager/internal/service"
 	"log/slog"
 	"net/http"
+
+	"github.com/gin-gonic/contrib/sessions"
+	"github.com/gin-gonic/gin"
+	"github.com/romakorinenko/task-manager/internal/constant"
+	"github.com/romakorinenko/task-manager/internal/repository"
+	"github.com/romakorinenko/task-manager/internal/service"
 )
-
-const UserSessionKey = "user"
-
-type TasksTemplateData struct {
-	Tasks []TaskTemplateData
-}
 
 type IUserController interface {
 	GetMainPage(c *gin.Context)
@@ -37,6 +33,13 @@ func NewUserController(userService service.IUserService, taskService service.ITa
 }
 
 func (u *UserController) GetMainPage(c *gin.Context) {
+	session := sessions.Default(c)
+	user := session.Get(constant.UserSessionKey)
+	if user != nil {
+		c.Redirect(http.StatusFound, "/tasks")
+		return
+	}
+
 	c.HTML(http.StatusOK, "login.html", nil)
 }
 
@@ -58,25 +61,14 @@ func (u *UserController) Login(c *gin.Context) {
 
 	if username == user.Login && password == user.Password {
 		session := sessions.Default(c)
-		session.Set(UserSessionKey, username)
+		session.Set(constant.UserSessionKey, username)
 		if err := session.Save(); err != nil {
 			slog.Error("error", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
 			return
 		}
-		//c.JSON(http.StatusOK, gin.H{"message": "Logged in successfully"})
 
-		//tasks, err := u.TaskService.GetAll(c.Request.Context())
-		//data := TasksTemplateData{tasks}
-		//if err != nil {
-		//	c.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
-		//	return
-		//}
 		c.Redirect(http.StatusFound, "/tasks")
-
-		//c.HTML(http.StatusOK, "usertasks.html", data)
-
-		// todo нужно проверить обычный пользак или все таки админ
 	} else {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 	}
@@ -88,7 +80,7 @@ func (u *UserController) Login(c *gin.Context) {
 // @Router /logout [post]
 func (u *UserController) Logout(c *gin.Context) {
 	session := sessions.Default(c)
-	session.Delete(UserSessionKey)
+	session.Delete(constant.UserSessionKey)
 	if err := session.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
 	}
@@ -98,7 +90,7 @@ func (u *UserController) Logout(c *gin.Context) {
 // TODO
 func (u *UserController) Create(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(UserSessionKey)
+	user := session.Get(constant.UserSessionKey)
 	if user == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -109,7 +101,7 @@ func (u *UserController) Create(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
 	}
 	dbUser := u.UserService.GetByLogin(c.Request.Context(), userLogin)
-	if dbUser.Role != "ADMIN" { // TODO: вынести все роли в константы
+	if dbUser.Role != constant.AdminRole {
 		c.JSON(http.StatusForbidden, gin.H{"message": "only admins can create users"})
 		return
 	}
@@ -126,7 +118,6 @@ func (u *UserController) Create(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusCreated, gin.H{"message": fmt.Sprintf("user '%s' created", newUser.Login)})
-		return
 	} else {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("user '%s' already exists", newUser.Login)})
 	}
@@ -135,7 +126,7 @@ func (u *UserController) Create(c *gin.Context) {
 // todo
 func (u *UserController) Block(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(UserSessionKey)
+	user := session.Get(constant.UserSessionKey)
 	if user == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -146,16 +137,11 @@ func (u *UserController) Block(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
 	}
 	dbUser := u.UserService.GetByLogin(c.Request.Context(), userLogin)
-	if dbUser.Role != "ADMIN" { // TODO: вынести все роли в константы
-		c.JSON(http.StatusForbidden, gin.H{"message": "only admins can create users"})
+	if dbUser.Role != constant.AdminRole {
+		c.JSON(http.StatusForbidden, gin.H{"message": "only admins can block users"})
 		return
 	}
 
-	//var blockUser repository.User
-	//if err := c.ShouldBindJSON(&blockUser); err != nil {
-	//	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	//	return
-	//}
 	userID := c.Param("id")
 
 	if u.UserService.BlockByID(c.Request.Context(), userID) {
@@ -168,7 +154,7 @@ func (u *UserController) Block(c *gin.Context) {
 // todo
 func (u *UserController) GetAll(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(UserSessionKey)
+	user := session.Get(constant.UserSessionKey)
 	if user == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -179,8 +165,8 @@ func (u *UserController) GetAll(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "internal server error"})
 	}
 	dbUser := u.UserService.GetByLogin(c.Request.Context(), userLogin)
-	if dbUser.Role != "ADMIN" { // TODO: вынести все роли в константы
-		c.JSON(http.StatusForbidden, gin.H{"message": "only admins can create users"})
+	if dbUser.Role != constant.AdminRole {
+		c.JSON(http.StatusForbidden, gin.H{"message": "only admins can receive all users"})
 		return
 	}
 

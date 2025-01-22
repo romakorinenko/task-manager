@@ -49,9 +49,9 @@ func main() {
 
 func MigrateData(dbPool *pgxpool.Pool) {
 	db := stdlib.OpenDBFromPool(dbPool)
-	pingErr := db.Ping()
-	if pingErr != nil {
-		log.Fatalln("cannot ping database", pingErr)
+	err := db.Ping()
+	if err != nil {
+		log.Fatalln("cannot ping database", err)
 	}
 
 	goose.SetBaseFS(embedMigrations)
@@ -64,10 +64,12 @@ func MigrateData(dbPool *pgxpool.Pool) {
 	}
 }
 
-// валидация
-// хендлеры
-// транзакции
-// логирование
-// тесты
-// бейджи
-// ci/cd
+// swagger - в первую очередь
+// поправить мидлвейр - во вторую очередь
+// разгрузить хендлеры переносом логики в сервис - в третью очередь
+// транзакции - в четвертую очередь
+// валидация - в пятую очередь
+// логирование - в шестую очередь
+// тесты - в седьмую очередь
+// ci/cd - в восьмую очередь
+// бейджи - в девятую очередь

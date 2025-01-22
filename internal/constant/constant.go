@@ -1,5 +1,8 @@
 package constant
 
+const UserSessionKey = "user"
+const AdminSessionKey = "admin"
+
 const (
 	Blocker = iota + 1
 	High

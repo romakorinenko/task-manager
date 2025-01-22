@@ -13,6 +13,8 @@ type ITaskService interface {
 	GetByUserID(ctx context.Context, userID int) ([]repository.Task, error)
 	GetByUserLogin(ctx context.Context, userLogin string) ([]repository.Task, error)
 	GetAll(ctx context.Context) ([]repository.Task, error)
+	GetByStatus(ctx context.Context, status string) ([]repository.Task, error)
+	GetByPriority(ctx context.Context, priority int) ([]repository.Task, error)
 }
 
 type TaskService struct {
@@ -49,4 +51,12 @@ func (t *TaskService) GetByUserLogin(ctx context.Context, userLogin string) ([]r
 
 func (t *TaskService) GetAll(ctx context.Context) ([]repository.Task, error) {
 	return t.taskRepository.GetAll(ctx)
+}
+
+func (t *TaskService) GetByStatus(ctx context.Context, status string) ([]repository.Task, error) {
+	return t.taskRepository.GetByStatus(ctx, status)
+}
+
+func (t *TaskService) GetByPriority(ctx context.Context, priority int) ([]repository.Task, error) {
+	return t.taskRepository.GetByPriority(ctx, priority)
 }

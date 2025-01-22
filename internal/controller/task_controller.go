@@ -2,43 +2,16 @@ package controller
 
 import (
 	"fmt"
-	"github.com/gin-gonic/contrib/sessions"
-	"github.com/gin-gonic/gin"
-	"github.com/romakorinenko/task-manager/internal/repository"
-	"github.com/romakorinenko/task-manager/internal/service"
-	"log/slog"
 	"net/http"
 	"strconv"
-	"time"
+
+	"github.com/gin-gonic/contrib/sessions"
+	"github.com/gin-gonic/gin"
+	"github.com/romakorinenko/task-manager/internal/constant"
+	"github.com/romakorinenko/task-manager/internal/dto"
+	"github.com/romakorinenko/task-manager/internal/repository"
+	"github.com/romakorinenko/task-manager/internal/service"
 )
-
-type TaskTemplateData struct {
-	ID          int
-	Title       string
-	Description string
-	Priority    int
-	Status      string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	UserLogin   string
-}
-
-func TaskToTaskTemplateData(task *repository.Task, userLogin string) *TaskTemplateData {
-	return &TaskTemplateData{
-		ID:          task.ID,
-		Title:       task.Title,
-		Description: task.Description,
-		Priority:    task.Priority,
-		Status:      task.Status,
-		CreatedAt:   task.CreatedAt,
-		UpdatedAt:   task.UpdatedAt,
-		UserLogin:   userLogin,
-	}
-}
-
-type UsersTemplateData struct {
-	Users []repository.User
-}
 
 type ITaskController interface {
 	GetByUserLogin(c *gin.Context)
@@ -49,6 +22,8 @@ type ITaskController interface {
 	Delete(c *gin.Context)
 	Create(c *gin.Context)
 	CreateTemplate(c *gin.Context)
+	GetByStatus(c *gin.Context)
+	GetByPriority(c *gin.Context)
 }
 
 type TaskController struct {
@@ -63,14 +38,8 @@ func NewTaskController(taskService service.ITaskService, userService service.IUs
 	}
 }
 
+// todo ok
 func (t *TaskController) GetByUserLogin(c *gin.Context) {
-	session := sessions.Default(c)
-	user := session.Get(UserSessionKey)
-	if user == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
-
 	userLoginParam := c.Param("login")
 	tasks, err := t.TaskService.GetByUserLogin(c.Request.Context(), userLoginParam)
 	if err != nil {
@@ -81,9 +50,10 @@ func (t *TaskController) GetByUserLogin(c *gin.Context) {
 	c.JSON(http.StatusOK, tasks)
 }
 
+// todo ok, but not fully
 func (t *TaskController) GetAll(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(UserSessionKey)
+	user := session.Get(constant.UserSessionKey)
 	if user == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -94,64 +64,58 @@ func (t *TaskController) GetAll(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
+
+	var tasks []repository.Task
 	userFromDB := t.UserService.GetByLogin(c.Request.Context(), userStr)
-	if userFromDB.Role != "ADMIN" { // todo в константу
-		slog.Error(fmt.Sprintf("cannot receive all users cause user '%s' is not ADMIN", userStr))
+	if userFromDB.Role == constant.AdminRole {
+		all, err := t.TaskService.GetAll(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("")})
+			return
+		}
+		tasks = all
+	} else {
+		byLogin, err := t.TaskService.GetByUserLogin(c.Request.Context(), userFromDB.Login)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("")})
+			return
+		}
+		tasks = byLogin
 	}
 
-	allTasks, err := t.TaskService.GetAll(c.Request.Context())
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("")})
-		return
-	}
-
-	var data []TaskTemplateData
-	for _, task := range allTasks {
+	var data []dto.TaskTemplateData
+	for _, task := range tasks {
 		userFromDB := t.UserService.GetByID(c.Request.Context(), task.UserID) // todo нужна новая структура и новый репо и сервис
-		taskTemplateData := TaskToTaskTemplateData(&task, userFromDB.Login)
+		taskTemplateData := dto.TaskToTaskTemplateData(&task, userFromDB.Login)
 
 		data = append(data, *taskTemplateData)
 	}
 
-	templateData := TasksTemplateData{data}
+	templateData := dto.TasksTemplateData{data}
 	c.HTML(http.StatusOK, "usertasks.html", templateData)
 }
 
+// todo ok
 func (t *TaskController) GetByID(c *gin.Context) {
-	session := sessions.Default(c)
-	user := session.Get(UserSessionKey)
-	if user == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
-
 	IDParam := c.Param("id")
 	taskID, err := strconv.Atoi(IDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "task ID is not number"})
 		return
 	}
-	task, err := t.TaskService.GetByID(c.Request.Context(), taskID)
+	task, err := t.TaskService.GetByID(c.Request.Context(), taskID) // todo вынести в сервис
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "task ID is not exists"})
 		return
 	}
 	userFromDB := t.UserService.GetByID(c.Request.Context(), task.UserID)
-	data := TaskToTaskTemplateData(task, userFromDB.Login)
+	data := dto.TaskToTaskTemplateData(task, userFromDB.Login)
 
 	c.HTML(http.StatusOK, "task.html", data)
 }
 
+// todo ok
 func (t *TaskController) Edit(c *gin.Context) {
-	session := sessions.Default(c)
-	user := session.Get(UserSessionKey)
-	if user == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
-
-	// todo либо админ, либо пользователь
-
 	taskIDParam := c.Param("id")
 	taskID, err := strconv.Atoi(taskIDParam)
 	if err != nil {
@@ -164,19 +128,13 @@ func (t *TaskController) Edit(c *gin.Context) {
 		return
 	}
 	userFromDB := t.UserService.GetByID(c.Request.Context(), task.UserID)
-	data := TaskToTaskTemplateData(task, userFromDB.Login)
+	data := dto.TaskToTaskTemplateData(task, userFromDB.Login)
 
 	c.HTML(http.StatusOK, "taskedit.html", data)
 }
 
+// todo ok
 func (t *TaskController) Update(c *gin.Context) {
-	session := sessions.Default(c)
-	user := session.Get(UserSessionKey)
-	if user == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
-
 	titleForm := c.PostForm("Title")
 	descriptionForm := c.PostForm("Description")
 	priorityForm := c.PostForm("Priority")
@@ -196,27 +154,23 @@ func (t *TaskController) Update(c *gin.Context) {
 	taskForUpdate.Description = descriptionForm
 	priority, err := strconv.Atoi(priorityForm)
 	if err != nil {
-		// todo
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
 	}
 	taskForUpdate.Priority = priority
 	taskForUpdate.Status = statusForm
 
 	_, err = t.TaskService.Update(c.Request.Context(), taskForUpdate)
 	if err != nil {
-		// todo
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
 	}
 
 	c.Redirect(http.StatusFound, fmt.Sprintf("/tasks/%d", taskID))
 }
 
+// todo ok
 func (t *TaskController) Delete(c *gin.Context) {
-	session := sessions.Default(c)
-	user := session.Get(UserSessionKey)
-	if user == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
-
 	taskIDParam := c.Param("id")
 	taskID, err := strconv.Atoi(taskIDParam)
 	if err != nil {
@@ -226,25 +180,20 @@ func (t *TaskController) Delete(c *gin.Context) {
 	err = t.TaskService.DeleteByID(c.Request.Context(), taskID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
 	}
 
 	c.Redirect(http.StatusFound, "/tasks")
 }
 
+// todo ok
 func (t *TaskController) Create(c *gin.Context) {
-	session := sessions.Default(c)
-	user := session.Get(UserSessionKey)
-	if user == nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-		return
-	}
-
 	titleForm := c.PostForm("Title")
 	descriptionForm := c.PostForm("Description")
 	priorityForm := c.PostForm("Priority")
 	priority, err := strconv.Atoi(priorityForm)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 	userLoginForm := c.PostForm("UserLogin")
@@ -255,19 +204,21 @@ func (t *TaskController) Create(c *gin.Context) {
 		Description: descriptionForm,
 		Priority:    priority,
 		UserID:      userFromDB.ID,
-		Status:      "OPEN", // todo в константы
+		Status:      constant.OpenTaskStatus,
 	}
 	createdTask, err := t.TaskService.Create(c.Request.Context(), taskForCreate)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	c.Redirect(http.StatusFound, fmt.Sprintf("/tasks/%d", createdTask.ID))
 }
 
+// todo ok
 func (t *TaskController) CreateTemplate(c *gin.Context) {
 	session := sessions.Default(c)
-	user := session.Get(UserSessionKey)
+	user := session.Get(constant.UserSessionKey)
 	if user == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -279,9 +230,9 @@ func (t *TaskController) CreateTemplate(c *gin.Context) {
 		return
 	}
 
-	var data UsersTemplateData
+	var data dto.UsersTemplateData
 	userFromDB := t.UserService.GetByLogin(c.Request.Context(), userStr)
-	if userFromDB.Role == "ADMIN" { //todo  в константу
+	if userFromDB.Role == constant.AdminRole {
 		users := t.UserService.GetAll(c.Request.Context())
 		data.Users = users
 	} else {
@@ -290,4 +241,80 @@ func (t *TaskController) CreateTemplate(c *gin.Context) {
 	}
 
 	c.HTML(http.StatusOK, "taskcreate.html", data)
+}
+
+func (t *TaskController) GetByStatus(c *gin.Context) {
+	session := sessions.Default(c)
+	user := session.Get(constant.UserSessionKey)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	userStr, ok := user.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	userFromDB := t.UserService.GetByLogin(c.Request.Context(), userStr)
+	if userFromDB.Role != constant.AdminRole {
+		c.JSON(http.StatusForbidden, gin.H{"error": "only admins can watch tasks by status"})
+		return
+	}
+
+	status := c.Param("status")
+	if status == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "status is not signed"})
+		return
+	}
+	tasks, err := t.TaskService.GetByStatus(c.Request.Context(), status)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+	}
+
+	c.JSON(http.StatusOK, tasks)
+}
+
+func (t *TaskController) GetByPriority(c *gin.Context) {
+	session := sessions.Default(c)
+	user := session.Get(constant.UserSessionKey)
+	if user == nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	userStr, ok := user.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	userFromDB := t.UserService.GetByLogin(c.Request.Context(), userStr)
+	if userFromDB.Role != constant.AdminRole {
+		c.JSON(http.StatusForbidden, gin.H{"error": "only admins can watch tasks by status"})
+	}
+
+	priorityParam := c.Param("priority")
+	if priorityParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "priorityParam is not signed"})
+		return
+	}
+	priority, strConvErr := strconv.Atoi(priorityParam)
+	if strConvErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	if priority < 1 || priority > 4 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "priorityParam should be from 1 to 4"})
+		return
+	}
+	tasks, err := t.TaskService.GetByPriority(c.Request.Context(), priority)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, tasks)
 }

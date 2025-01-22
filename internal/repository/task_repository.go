@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"time"
+
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"log/slog"
-	"time"
 )
 
 type Task struct {
@@ -32,6 +33,8 @@ type ITaskRepo interface {
 	GetByUserID(ctx context.Context, userID int) ([]Task, error)
 	GetByUserLogin(ctx context.Context, userLogin string) ([]Task, error)
 	GetAll(ctx context.Context) ([]Task, error)
+	GetByStatus(ctx context.Context, status string) ([]Task, error)
+	GetByPriority(ctx context.Context, priority int) ([]Task, error)
 }
 
 type TaskRepo struct {
@@ -165,6 +168,58 @@ func (t *TaskRepo) GetAll(ctx context.Context) ([]Task, error) {
 		BuildWithFlavor(sqlbuilder.PostgreSQL)
 
 	rows, err := t.dbPool.Query(ctx, sql)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	res := make([]Task, 0)
+	for rows.Next() {
+		var task Task
+		if rowScanErr := rows.Scan(TaskStruct.Addr(&task)...); rowScanErr != nil {
+			slog.Info(err.Error())
+			return nil, err
+		}
+
+		res = append(res, task)
+	}
+
+	return res, nil
+}
+
+func (t *TaskRepo) GetByStatus(ctx context.Context, status string) ([]Task, error) {
+	sb := TaskStruct.SelectFrom("tasks")
+	sql, args := sb.Where(sb.Equal("status", status)).
+		OrderBy("id").
+		BuildWithFlavor(sqlbuilder.PostgreSQL)
+
+	rows, err := t.dbPool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	res := make([]Task, 0)
+	for rows.Next() {
+		var task Task
+		if rowScanErr := rows.Scan(TaskStruct.Addr(&task)...); rowScanErr != nil {
+			slog.Info(err.Error())
+			return nil, err
+		}
+
+		res = append(res, task)
+	}
+
+	return res, nil
+}
+
+func (t *TaskRepo) GetByPriority(ctx context.Context, priority int) ([]Task, error) {
+	sb := TaskStruct.SelectFrom("tasks")
+	sql, args := sb.Where(sb.Equal("priority", priority)).
+		OrderBy("id").
+		BuildWithFlavor(sqlbuilder.PostgreSQL)
+
+	rows, err := t.dbPool.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
 	}

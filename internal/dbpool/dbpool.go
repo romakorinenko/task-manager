@@ -2,9 +2,9 @@ package dbpool
 
 import (
 	"context"
-	"github.com/romakorinenko/task-manager/internal/config"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/romakorinenko/task-manager/internal/config"
 )
 
 func NewDBPool(ctx context.Context, dBCfg *config.DB) (*pgxpool.Pool, error) {
