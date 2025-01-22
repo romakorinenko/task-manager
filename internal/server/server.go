@@ -2,15 +2,17 @@ package server
 
 import (
 	"fmt"
+	"log/slog"
+	"net/http"
+
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/romakorinenko/task-manager/internal/constant"
 	"github.com/romakorinenko/task-manager/internal/controller"
+	"github.com/romakorinenko/task-manager/internal/repository"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"log/slog"
-	"net/http"
 )
 
 var Router *gin.Engine
@@ -41,27 +43,34 @@ func RegisterUserHandlers(userController controller.IUserController) {
 	Router.POST("/login", userController.Login)
 	Router.GET("/logout", userController.Logout)
 
-	Router.POST("/users", UserSessionMiddleware, userController.Create)
-	Router.PUT("/users/:id/block", UserSessionMiddleware, userController.Block)
-	Router.GET("/users", UserSessionMiddleware, userController.GetAll)
+	usersRouterGroup := Router.Group("/users")
+	{
+		usersRouterGroup.POST("/", AdminSessionMiddleware, userController.Create)
+		usersRouterGroup.PUT("/:id/block", AdminSessionMiddleware, userController.Block)
+		usersRouterGroup.GET("/", AdminSessionMiddleware, userController.GetAll)
+	}
 }
 
 func RegisterTaskHandlers(taskController controller.ITaskController) {
-	Router.GET("/tasks/create", taskController.CreateTemplate)
-	Router.POST("/tasks", UserSessionMiddleware, taskController.Create)
-	Router.POST("/tasks/:id", UserSessionMiddleware, taskController.Update)
-	Router.POST("/tasks/:id/delete", UserSessionMiddleware, taskController.Delete)
-	Router.GET("/tasks/:id", UserSessionMiddleware, taskController.GetByID)
-	Router.GET("/tasks/:id/edit", UserSessionMiddleware, taskController.Edit)
-	Router.GET("/tasks/user/:login", UserSessionMiddleware, taskController.GetByUserLogin)
-	Router.GET("/tasks", taskController.GetAll)
-	Router.GET("/tasks/by-status/:status", taskController.GetByStatus)
-	Router.GET("/tasks/by-priority/:priority", taskController.GetByPriority)
+
+	tasksRouterGroup := Router.Group("/tasks")
+	{
+		tasksRouterGroup.GET("/create", taskController.CreateTemplate)
+		tasksRouterGroup.POST("/", UserSessionMiddleware, taskController.Create)
+		tasksRouterGroup.POST("/:id", UserSessionMiddleware, taskController.Update)
+		tasksRouterGroup.POST("/:id/delete", UserSessionMiddleware, taskController.Delete)
+		tasksRouterGroup.GET("/:id", UserSessionMiddleware, taskController.GetByID)
+		tasksRouterGroup.GET("/:id/edit", UserSessionMiddleware, taskController.Edit)
+		tasksRouterGroup.GET("/user/:login", UserSessionMiddleware, taskController.GetByUserLogin)
+		tasksRouterGroup.GET("/", taskController.GetAll)
+		tasksRouterGroup.GET("/by-status/:status", AdminSessionMiddleware, taskController.GetByStatus)
+		tasksRouterGroup.GET("/by-priority/:priority", AdminSessionMiddleware, taskController.GetByPriority)
+	}
 }
 
 func RegisterSwaggerAndMetricsHandlers() {
-	Router.GET("/swagger/*any", UserSessionMiddleware, ginSwagger.WrapHandler(swaggerFiles.Handler))
-	Router.GET("/metrics", UserSessionMiddleware, gin.WrapH(promhttp.Handler()))
+	Router.GET("/swagger/*any", AdminSessionMiddleware, ginSwagger.WrapHandler(swaggerFiles.Handler))
+	Router.GET("/metrics", AdminSessionMiddleware, gin.WrapH(promhttp.Handler()))
 }
 
 func UserSessionMiddleware(c *gin.Context) {
@@ -77,5 +86,16 @@ func AdminSessionMiddleware(c *gin.Context) {
 	user := session.Get(constant.UserSessionKey)
 	if user == nil {
 		c.Redirect(http.StatusFound, "/")
+	}
+
+	sessionUser, ok := user.(*repository.User)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+
+	if sessionUser.Role != constant.AdminRole {
+		c.JSON(http.StatusForbidden, gin.H{"error": "you should be admin for the action"})
+		return
 	}
 }

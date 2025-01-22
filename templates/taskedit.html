@@ -55,7 +55,12 @@
     <input type="text" id="Priority" name="Priority" value="{{.Priority}}">
 
     <label for="Status">Статус:</label>
-    <input type="text" id="Status" name="Status" value="{{.Status}}">
+    <select id="Status" name="Status" required>
+        <option value="" disabled selected>Выберите статус</option>
+        <option value="OPEN">OPEN</option>
+        <option value="IN_PROGRESS">IN_PROGRESS</option>
+        <option value="DONE">DONE</option>
+    </select>
 
     <label for="CreatedAt">Создана:</label>
     <input type="text" id="CreatedAt" name="CreatedAt" value="{{.CreatedAt}}" readonly>

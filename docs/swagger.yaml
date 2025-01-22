@@ -1,0 +1,517 @@
+basePath: /
+definitions:
+  dto.ResponseMap:
+    additionalProperties:
+      type: string
+    type: object
+  dto.TaskTemplateData:
+    properties:
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      priority:
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: string
+      userLogin:
+        type: string
+    type: object
+  dto.UsersTemplateData:
+    properties:
+      users:
+        items:
+          $ref: '#/definitions/repository.User'
+        type: array
+    type: object
+  repository.Task:
+    properties:
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      priority:
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: string
+      userId:
+        type: integer
+    type: object
+  repository.User:
+    properties:
+      active:
+        type: boolean
+      createdAt:
+        type: string
+      id:
+        type: integer
+      login:
+        type: string
+      password:
+        type: string
+      role:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Документация по API приложения Task Manager
+  title: Task Manager API
+  version: "1.0"
+paths:
+  /:
+    get:
+      description: открывает страницу для логина или главную таблицу с задачами, если
+        пользователь уже авторизован
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "302":
+          description: Found
+          schema:
+            type: string
+      summary: Get Main Page
+      tags:
+      - pages
+  /login:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: аутентификация пользозователя и создание сессии
+      parameters:
+      - description: Username
+        in: formData
+        name: username
+        required: true
+        type: string
+      - description: Password
+        in: formData
+        name: password
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      summary: User Login
+      tags:
+      - users
+  /logout:
+    get:
+      description: завершает сессию пользователя и открывает страницу для логина
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      summary: User Logout
+      tags:
+      - users
+  /tasks:
+    get:
+      description: |-
+        возвращает список задач в зависимости от роли:
+        для админов - все задачи, для пользователей - задачи пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of tasks
+          schema:
+            items:
+              $ref: '#/definitions/repository.Task'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      summary: Get All Tasks
+      tags:
+      - tasks
+  /tasks/{id}:
+    get:
+      description: возвращает задачу по идентификатору
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TaskTemplateData'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      summary: Get Task by ID
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: обновляет задачу по идентификатору
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Task Title
+        in: formData
+        name: Title
+        required: true
+        type: string
+      - description: Task Description
+        in: formData
+        name: Description
+        required: true
+        type: string
+      - description: Task Priority
+        in: formData
+        name: Priority
+        required: true
+        type: integer
+      - description: Task Status
+        in: formData
+        name: Status
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      summary: Update Task by ID
+      tags:
+      - tasks
+  /tasks/{id}/delete:
+    post:
+      consumes:
+      - application/json
+      description: Удаляет задачу по указанному идентификатору
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      summary: Delete Task by ID
+      tags:
+      - tasks
+  /tasks/{id}/edit:
+    get:
+      description: отображает форму редактирования задачи по идентификатору
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TaskTemplateData'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      tags:
+      - pages
+  /tasks/by-priority/{priority}:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список задач с указанным приоритетом. Только для админов
+      parameters:
+      - description: Приоритет задачи
+        in: path
+        name: priority
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/repository.Task'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      summary: Get Tasks by priority
+      tags:
+      - tasks-admins
+  /tasks/by-status/{status}:
+    get:
+      consumes:
+      - application/json
+      description: |-
+        Возвращает список задач с указанным статусом. Статус должен быть одним из: OPEN, IN_PROGRESS или DONE.
+        Только для админов
+      parameters:
+      - description: Статус задачи
+        in: path
+        name: status
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/repository.Task'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      summary: Get Tasks by status
+      tags:
+      - tasks-admins
+  /tasks/create:
+    get:
+      consumes:
+      - application/json
+      description: Отображает страницу создания шаблона задачи для пользователя в
+        зависимости от его роли.
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UsersTemplateData'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      tags:
+      - pages
+    post:
+      consumes:
+      - application/json
+      description: 'Создаёт новую задачу с указанными параметрами: заголовком, описанием,
+        приоритетом и пользователем.'
+      parameters:
+      - description: Заголовок задачи
+        in: formData
+        name: Title
+        required: true
+        type: string
+      - description: Описание задачи
+        in: formData
+        name: Description
+        required: true
+        type: string
+      - description: Приоритет задачи (число)
+        in: formData
+        name: Priority
+        required: true
+        type: integer
+      - description: Логин пользователя, которому назначена задача
+        in: formData
+        name: UserLogin
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      summary: Create task
+      tags:
+      - tasks
+  /tasks/user/{login}:
+    get:
+      description: возвращает задачи пользователя по его логину
+      parameters:
+      - description: User Login
+        in: path
+        name: login
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of tasks
+          schema:
+            items:
+              $ref: '#/definitions/repository.Task'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      summary: Get Tasks by User Login
+      tags:
+      - tasks
+  /users:
+    get:
+      description: возвращает список всех пользователей, только для админов
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of users
+          schema:
+            items:
+              $ref: '#/definitions/repository.User'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      summary: Get All Users
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      description: создает нового пользователя, только для админов
+      parameters:
+      - description: New User Data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/repository.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      summary: Create User
+      tags:
+      - users-admins
+  /users/{id}/block:
+    post:
+      description: блокирует пользователя по идентификатору, только для админов
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      summary: Block User
+      tags:
+      - users-admins
+swagger: "2.0"

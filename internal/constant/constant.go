@@ -1,7 +1,6 @@
 package constant
 
 const UserSessionKey = "user"
-const AdminSessionKey = "admin"
 
 const (
 	Blocker = iota + 1
@@ -20,6 +19,8 @@ const (
 	InProgressTaskStatus = "IN_PROGRESS"
 	DoneTaskStatus       = "DONE"
 )
+
+var TaskStatuses = []string{OpenTaskStatus, InProgressTaskStatus, DoneTaskStatus}
 
 const (
 	ActiveUser  = true
