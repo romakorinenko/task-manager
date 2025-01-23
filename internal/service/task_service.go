@@ -2,61 +2,118 @@ package service
 
 import (
 	"context"
+	"time"
+
+	"github.com/romakorinenko/task-manager/internal/constant"
+	"github.com/romakorinenko/task-manager/internal/errs"
 	"github.com/romakorinenko/task-manager/internal/repository"
 )
 
 type ITaskService interface {
-	Create(ctx context.Context, task *repository.Task) (*repository.Task, error)
-	Update(ctx context.Context, task *repository.Task) (*repository.Task, error)
-	DeleteByID(ctx context.Context, taskID int) error
-	GetByID(ctx context.Context, taskID int) (*repository.Task, error)
-	GetByUserID(ctx context.Context, userID int) ([]repository.Task, error)
-	GetByUserLogin(ctx context.Context, userLogin string) ([]repository.Task, error)
-	GetAll(ctx context.Context) ([]repository.Task, error)
+	GetTaskRepository() repository.ITaskRepo
+	Create(ctx context.Context, priority int, title, description, userLogin string) (int, error)
+	Update(ctx context.Context,
+		title, description, status string,
+		priority, ID int,
+	) error
+	GetAllByUser(ctx context.Context, user *repository.User) ([]repository.TaskWithLogin, error)
 	GetByStatus(ctx context.Context, status string) ([]repository.Task, error)
 	GetByPriority(ctx context.Context, priority int) ([]repository.Task, error)
 }
 
 type TaskService struct {
-	taskRepository repository.ITaskRepo
+	TaskRepository repository.ITaskRepo
+	userRepository repository.IUserRepo
 }
 
-func NewTaskService(taskRepository repository.ITaskRepo) *TaskService {
-	return &TaskService{taskRepository: taskRepository}
+func NewTaskService(taskRepository repository.ITaskRepo, userRepository repository.IUserRepo) *TaskService {
+	return &TaskService{
+		TaskRepository: taskRepository,
+		userRepository: userRepository,
+	}
 }
 
-func (t *TaskService) Create(ctx context.Context, task *repository.Task) (*repository.Task, error) {
-	return t.taskRepository.Create(ctx, task)
+func (t *TaskService) GetTaskRepository() repository.ITaskRepo {
+	return t.TaskRepository
 }
 
-func (t *TaskService) Update(ctx context.Context, task *repository.Task) (*repository.Task, error) {
-	return t.taskRepository.Update(ctx, task)
+func (t *TaskService) GetAllByUser(ctx context.Context, user *repository.User) ([]repository.TaskWithLogin, error) {
+	userRole := user.Role
+	if userRole == constant.AdminRole {
+		return t.TaskRepository.GetTasksWithLogin(ctx)
+	}
+
+	return t.TaskRepository.GetTasksWithLoginByUserID(ctx, user.ID)
 }
 
-func (t *TaskService) DeleteByID(ctx context.Context, taskID int) error {
-	return t.taskRepository.DeleteByID(ctx, taskID)
+func (t *TaskService) Create(ctx context.Context, priority int, title, description, userLogin string) (int, error) {
+	if title == "" || description == "" || userLogin == "" || priority < 1 || priority > 4 {
+		return 0, errs.BadReqErr{}
+	}
+
+	user, err := t.userRepository.GetByLogin(ctx, userLogin)
+	if err != nil {
+		return 0, errs.BadReqErr{}
+	}
+
+	now := time.Now()
+	taskForCreate := &repository.Task{
+		Title:       title,
+		Description: description,
+		Priority:    priority,
+		UserID:      user.ID,
+		Status:      constant.OpenTaskStatus,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+
+	return t.TaskRepository.Create(ctx, taskForCreate)
 }
 
-func (t *TaskService) GetByID(ctx context.Context, taskID int) (*repository.Task, error) {
-	return t.taskRepository.GetByID(ctx, taskID)
-}
+func (t *TaskService) Update(ctx context.Context,
+	title, description, status string,
+	priority, ID int,
+) error {
+	if title == "" || description == "" || status == "" || priority < 1 || priority > 4 {
+		return errs.BadReqErr{}
+	}
 
-func (t *TaskService) GetByUserID(ctx context.Context, userID int) ([]repository.Task, error) {
-	return t.taskRepository.GetByUserID(ctx, userID)
-}
+	taskForUpdate, err := t.TaskRepository.GetByID(ctx, ID)
+	if err != nil {
+		return errs.BadReqErr{}
+	}
 
-func (t *TaskService) GetByUserLogin(ctx context.Context, userLogin string) ([]repository.Task, error) {
-	return t.taskRepository.GetByUserLogin(ctx, userLogin)
-}
+	taskForUpdate.ID = ID
+	taskForUpdate.Title = title
+	taskForUpdate.Description = description
+	taskForUpdate.Priority = priority
+	taskForUpdate.Status = status
 
-func (t *TaskService) GetAll(ctx context.Context) ([]repository.Task, error) {
-	return t.taskRepository.GetAll(ctx)
+	return t.TaskRepository.Update(ctx, taskForUpdate)
 }
 
 func (t *TaskService) GetByStatus(ctx context.Context, status string) ([]repository.Task, error) {
-	return t.taskRepository.GetByStatus(ctx, status)
+	if status == "" {
+		return nil, errs.BadReqErr{}
+	}
+
+	var isStatus bool
+	for _, taskStatus := range constant.TaskStatuses {
+		if taskStatus == status {
+			isStatus = true
+		}
+	}
+	if !isStatus {
+		return nil, errs.BadReqErr{}
+	}
+
+	return t.TaskRepository.GetByStatus(ctx, status)
 }
 
 func (t *TaskService) GetByPriority(ctx context.Context, priority int) ([]repository.Task, error) {
-	return t.taskRepository.GetByPriority(ctx, priority)
+	if priority < 1 || priority > 4 {
+		return nil, errs.BadReqErr{}
+	}
+
+	return t.TaskRepository.GetByPriority(ctx, priority)
 }

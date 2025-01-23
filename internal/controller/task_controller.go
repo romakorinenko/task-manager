@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/romakorinenko/task-manager/internal/constant"
 	"github.com/romakorinenko/task-manager/internal/dto"
+	"github.com/romakorinenko/task-manager/internal/errs"
 	"github.com/romakorinenko/task-manager/internal/repository"
 	"github.com/romakorinenko/task-manager/internal/service"
 )
@@ -48,8 +50,8 @@ func NewTaskController(taskService service.ITaskService, userService service.IUs
 // @Failure 500 {object} dto.ResponseMap
 // @Router /tasks/user/{login} [get]
 func (t *TaskController) GetByUserLogin(c *gin.Context) {
-	userLoginParam := c.Param("login")
-	tasks, err := t.TaskService.GetByUserLogin(c.Request.Context(), userLoginParam)
+	userLogin := c.Param("login")
+	tasks, err := t.TaskService.GetTaskRepository().GetByUserLogin(c.Request.Context(), userLogin)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseMap{"message": "internal server error"})
 		return
@@ -61,7 +63,7 @@ func (t *TaskController) GetByUserLogin(c *gin.Context) {
 // GetAll возвращает список задач в зависимости от роли пользователя.
 // @Summary Get All Tasks
 // @Description возвращает список задач в зависимости от роли:
-// @Description для админов - все задачи, для пользователей - задачи пользователя
+// @Description для администраторов - все задачи, для пользователей - задачи пользователя
 // @Tags tasks
 // @Produce json
 // @Success 200 {array} repository.Task "List of tasks"
@@ -83,33 +85,14 @@ func (t *TaskController) GetAll(c *gin.Context) {
 		return
 	}
 
-	var tasks []repository.Task
-	if sessionUser.Role == constant.AdminRole {
-		all, err := t.TaskService.GetAll(c.Request.Context())
-		if err != nil {
-			c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": fmt.Sprintf("")})
-			return
-		}
-		tasks = all
-	} else if sessionUser.Role == constant.UserRole {
-		byLogin, err := t.TaskService.GetByUserLogin(c.Request.Context(), sessionUser.Login)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": fmt.Sprintf("")})
-			return
-		}
-		tasks = byLogin
+	tasks, err := t.TaskService.GetAllByUser(c.Request.Context(), sessionUser)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ResponseMap{"error": "internal server error"})
+		return
 	}
 
-	var data []dto.TaskTemplateData
-	for _, task := range tasks {
-		userFromDB := t.UserService.GetByID(c.Request.Context(), task.UserID) // todo нужна новая структура и новый репо и сервис
-		taskTemplateData := dto.TaskToTaskTemplateData(&task, userFromDB.Login)
-
-		data = append(data, *taskTemplateData)
-	}
-
-	templateData := dto.TasksTemplateData{data}
-	c.HTML(http.StatusOK, "usertasks.html", templateData)
+	templateData := dto.TasksWithLoginTemplateData{Tasks: tasks}
+	c.HTML(http.StatusOK, "tasks.html", templateData)
 }
 
 // GetByID возвращает задачу по идентификатору.
@@ -118,7 +101,7 @@ func (t *TaskController) GetAll(c *gin.Context) {
 // @Tags tasks
 // @Produce html
 // @Param id path string true "Task ID"
-// @Success 200 {object} dto.TaskTemplateData
+// @Success 200 {object} repository.TaskWithLogin
 // @Failure 400 {object} dto.ResponseMap
 // @Router /tasks/{id} [get]
 func (t *TaskController) GetByID(c *gin.Context) {
@@ -128,15 +111,14 @@ func (t *TaskController) GetByID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": "task ID is not number"})
 		return
 	}
-	task, err := t.TaskService.GetByID(c.Request.Context(), taskID) // todo вынести в сервис, новый метод репо создать
+
+	task, err := t.TaskService.GetTaskRepository().GetTaskWithLoginByID(c.Request.Context(), taskID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": "task ID is not exists"})
+		c.JSON(http.StatusInternalServerError, dto.ResponseMap{"error": "internal server error"})
 		return
 	}
-	userFromDB := t.UserService.GetByID(c.Request.Context(), task.UserID)
-	data := dto.TaskToTaskTemplateData(task, userFromDB.Login)
 
-	c.HTML(http.StatusOK, "task.html", data)
+	c.HTML(http.StatusOK, "task.html", task)
 }
 
 // Edit отображает форму редактирования задачи по идентификатору.
@@ -144,7 +126,7 @@ func (t *TaskController) GetByID(c *gin.Context) {
 // @Tags pages
 // @Produce html
 // @Param id path string true "Task ID"
-// @Success 200 {object} dto.TaskTemplateData
+// @Success 200 {object} repository.TaskWithLogin
 // @Failure 400 {object} dto.ResponseMap
 // @Router /tasks/{id}/edit [get]
 func (t *TaskController) Edit(c *gin.Context) {
@@ -154,15 +136,14 @@ func (t *TaskController) Edit(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": "task ID is not number"})
 		return
 	}
-	task, err := t.TaskService.GetByID(c.Request.Context(), taskID)
+
+	task, err := t.TaskService.GetTaskRepository().GetTaskWithLoginByID(c.Request.Context(), taskID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": "task ID is not exists"})
+		c.JSON(http.StatusInternalServerError, dto.ResponseMap{"error": "internal server error"})
 		return
 	}
-	userFromDB := t.UserService.GetByID(c.Request.Context(), task.UserID)
-	data := dto.TaskToTaskTemplateData(task, userFromDB.Login)
 
-	c.HTML(http.StatusOK, "taskedit.html", data)
+	c.HTML(http.StatusOK, "task_edit.html", task)
 }
 
 // Update обновляет задачу по идентификатору.
@@ -181,33 +162,27 @@ func (t *TaskController) Edit(c *gin.Context) {
 // @Failure 500 {object} dto.ResponseMap
 // @Router /tasks/{id} [post]
 func (t *TaskController) Update(c *gin.Context) {
-	titleForm := c.PostForm("Title")
-	descriptionForm := c.PostForm("Description")
+	title := c.PostForm("Title")
+	description := c.PostForm("Description")
+	status := c.PostForm("Status")
 	priorityForm := c.PostForm("Priority")
-	statusForm := c.PostForm("Status")
+	priority, err := strconv.Atoi(priorityForm)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": "priority is not a number"})
+		return
+	}
 	taskIDParam := c.Param("id")
 	taskID, err := strconv.Atoi(taskIDParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": "task ID is not number"})
 		return
 	}
-	taskForUpdate, err := t.TaskService.GetByID(c.Request.Context(), taskID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": "task ID is not exists"})
-		return
-	}
-	taskForUpdate.Title = titleForm
-	taskForUpdate.Description = descriptionForm
-	priority, err := strconv.Atoi(priorityForm)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ResponseMap{"error": "internal server error"})
-		return
-	}
-	taskForUpdate.Priority = priority
-	taskForUpdate.Status = statusForm
 
-	_, err = t.TaskService.Update(c.Request.Context(), taskForUpdate)
-	if err != nil {
+	err = t.TaskService.Update(c.Request.Context(), title, description, status, priority, taskID)
+	if err != nil && errors.Is(err, errs.BadReqErr{}) {
+		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": err.Error()})
+		return
+	} else if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseMap{"error": "internal server error"})
 		return
 	}
@@ -233,7 +208,7 @@ func (t *TaskController) Delete(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": "task ID is not number"})
 		return
 	}
-	err = t.TaskService.DeleteByID(c.Request.Context(), taskID)
+	err = t.TaskService.GetTaskRepository().DeleteByID(c.Request.Context(), taskID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseMap{"error": "internal server error"})
 		return
@@ -257,31 +232,26 @@ func (t *TaskController) Delete(c *gin.Context) {
 // @Failure 500 {object} dto.ResponseMap
 // @Router /tasks/create [post]
 func (t *TaskController) Create(c *gin.Context) {
-	titleForm := c.PostForm("Title")
-	descriptionForm := c.PostForm("Description")
+	title := c.PostForm("Title")
+	description := c.PostForm("Description")
+	userLogin := c.PostForm("UserLogin")
 	priorityForm := c.PostForm("Priority")
 	priority, err := strconv.Atoi(priorityForm)
 	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": "priority is not a number"})
+		return
+	}
+
+	createdTaskID, err := t.TaskService.Create(c.Request.Context(), priority, title, description, userLogin)
+	if err != nil && errors.Is(err, errs.BadReqErr{}) {
+		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": err.Error()})
+		return
+	} else if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseMap{"error": "internal server error"})
 		return
 	}
-	userLoginForm := c.PostForm("UserLogin")
-	userFromDB := t.UserService.GetByLogin(c.Request.Context(), userLoginForm)
 
-	taskForCreate := &repository.Task{
-		Title:       titleForm,
-		Description: descriptionForm,
-		Priority:    priority,
-		UserID:      userFromDB.ID,
-		Status:      constant.OpenTaskStatus,
-	}
-	createdTask, err := t.TaskService.Create(c.Request.Context(), taskForCreate)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": err.Error()})
-		return
-	}
-
-	c.Redirect(http.StatusFound, fmt.Sprintf("/tasks/%d", createdTask.ID))
+	c.Redirect(http.StatusFound, fmt.Sprintf("/tasks/%d", createdTaskID))
 }
 
 // CreateTemplate отображает форму создания задачи.
@@ -300,7 +270,6 @@ func (t *TaskController) CreateTemplate(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, dto.ResponseMap{"error": "unauthorized"})
 		return
 	}
-
 	sessionUser, ok := user.(*repository.User)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, dto.ResponseMap{"error": "internal server error"})
@@ -316,13 +285,13 @@ func (t *TaskController) CreateTemplate(c *gin.Context) {
 		data.Users = users
 	}
 
-	c.HTML(http.StatusOK, "taskcreate.html", data)
+	c.HTML(http.StatusOK, "task_create.html", data)
 }
 
 // GetByStatus Получить задачи по статусу.
 // @Summary Get Tasks by status
 // @Description Возвращает список задач с указанным статусом. Статус должен быть одним из: OPEN, IN_PROGRESS или DONE.
-// @Description Только для админов
+// @Description Только для администраторов
 // @Tags tasks-admins
 // @Accept json
 // @Produce json
@@ -332,29 +301,15 @@ func (t *TaskController) CreateTemplate(c *gin.Context) {
 // @Failure 500 {object} dto.ResponseMap
 // @Router /tasks/by-status/{status} [get]
 func (t *TaskController) GetByStatus(c *gin.Context) {
-	// todo вынести в сервис проверку
-
 	status := c.Param("status")
-	if status == "" {
-		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": "status is not signed"})
-		return
-	}
-
-	var isStatus bool
-	for _, taskStatus := range constant.TaskStatuses {
-		if taskStatus == status {
-			isStatus = true
-		}
-	}
-
-	if !isStatus {
-		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": fmt.Sprintf("status %s incorrect, use OPEN, IN_PROGRESS or DONE", status)})
-		return
-	}
 
 	tasks, err := t.TaskService.GetByStatus(c.Request.Context(), status)
-	if err != nil {
+	if err != nil && errors.Is(err, errs.BadReqErr{}) {
+		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": err.Error()})
+		return
+	} else if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseMap{"error": "internal server error"})
+		return
 	}
 
 	c.JSON(http.StatusOK, tasks)
@@ -362,7 +317,7 @@ func (t *TaskController) GetByStatus(c *gin.Context) {
 
 // GetByPriority Получить задачи по приоритету.
 // @Summary Get Tasks by priority
-// @Description Возвращает список задач с указанным приоритетом. Только для админов
+// @Description Возвращает список задач с указанным приоритетом. Только для администраторов
 // @Tags tasks-admins
 // @Accept json
 // @Produce json
@@ -372,8 +327,6 @@ func (t *TaskController) GetByStatus(c *gin.Context) {
 // @Failure 500 {object} dto.ResponseMap
 // @Router /tasks/by-priority/{priority} [get]
 func (t *TaskController) GetByPriority(c *gin.Context) {
-	// todo вынести в сервис проверку
-
 	priorityParam := c.Param("priority")
 	if priorityParam == "" {
 		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": "priority is not signed or incorrect"})
@@ -381,16 +334,15 @@ func (t *TaskController) GetByPriority(c *gin.Context) {
 	}
 	priority, strConvErr := strconv.Atoi(priorityParam)
 	if strConvErr != nil {
-		c.JSON(http.StatusInternalServerError, dto.ResponseMap{"error": "internal server error"})
+		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": "priority is not a number"})
 		return
 	}
 
-	if priority < 1 || priority > 4 {
-		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": "priority should be from 1 to 4"})
-		return
-	}
 	tasks, err := t.TaskService.GetByPriority(c.Request.Context(), priority)
-	if err != nil {
+	if err != nil && errors.Is(err, errs.BadReqErr{}) {
+		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": err.Error()})
+		return
+	} else if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseMap{"error": "internal server error"})
 		return
 	}

@@ -45,9 +45,9 @@ func RegisterUserHandlers(userController controller.IUserController) {
 
 	usersRouterGroup := Router.Group("/users")
 	{
-		usersRouterGroup.POST("/", AdminSessionMiddleware, userController.Create)
+		usersRouterGroup.POST("", AdminSessionMiddleware, userController.Create)
 		usersRouterGroup.PUT("/:id/block", AdminSessionMiddleware, userController.Block)
-		usersRouterGroup.GET("/", AdminSessionMiddleware, userController.GetAll)
+		usersRouterGroup.GET("", AdminSessionMiddleware, userController.GetAll)
 	}
 }
 
@@ -56,13 +56,13 @@ func RegisterTaskHandlers(taskController controller.ITaskController) {
 	tasksRouterGroup := Router.Group("/tasks")
 	{
 		tasksRouterGroup.GET("/create", taskController.CreateTemplate)
-		tasksRouterGroup.POST("/", UserSessionMiddleware, taskController.Create)
+		tasksRouterGroup.POST("", UserSessionMiddleware, taskController.Create)
 		tasksRouterGroup.POST("/:id", UserSessionMiddleware, taskController.Update)
 		tasksRouterGroup.POST("/:id/delete", UserSessionMiddleware, taskController.Delete)
 		tasksRouterGroup.GET("/:id", UserSessionMiddleware, taskController.GetByID)
 		tasksRouterGroup.GET("/:id/edit", UserSessionMiddleware, taskController.Edit)
 		tasksRouterGroup.GET("/user/:login", UserSessionMiddleware, taskController.GetByUserLogin)
-		tasksRouterGroup.GET("/", taskController.GetAll)
+		tasksRouterGroup.GET("", taskController.GetAll)
 		tasksRouterGroup.GET("/by-status/:status", AdminSessionMiddleware, taskController.GetByStatus)
 		tasksRouterGroup.GET("/by-priority/:priority", AdminSessionMiddleware, taskController.GetByPriority)
 	}

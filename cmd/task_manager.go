@@ -36,14 +36,11 @@ func main() {
 
 	MigrateData(dbPool)
 
-	userController := controller.NewUserController(
-		service.NewUserService(repository.NewUserRepo(dbPool)),
-		service.NewTaskService(repository.NewTaskRepo(dbPool)),
-	)
-	taskController := controller.NewTaskController(
-		service.NewTaskService(repository.NewTaskRepo(dbPool)),
-		service.NewUserService(repository.NewUserRepo(dbPool)),
-	)
+	userService := service.NewUserService(repository.NewUserRepo(dbPool))
+	taskService := service.NewTaskService(repository.NewTaskRepo(dbPool), repository.NewUserRepo(dbPool))
+	userController := controller.NewUserController(userService, taskService)
+	taskController := controller.NewTaskController(taskService, userService)
+
 	server.RegisterServerAndHandlers(userController, taskController, cfg.Server.Port)
 }
 
@@ -63,13 +60,3 @@ func MigrateData(dbPool *pgxpool.Pool) {
 		log.Fatalln("cannot migrate data", migrationsErr)
 	}
 }
-
-// разгрузить хендлеры переносом логики в сервис - 2
-// транзакции - 3
-// валидация - 4
-// логирование - 5
-// тесты - 6
-// ci/cd - 7
-// бейджи - 8
-
-// 1 проверить все эндпоинты в swagger swag init -g cmd/task_manager.go -o cmd/docs

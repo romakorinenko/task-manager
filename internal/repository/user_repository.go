@@ -11,6 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const UsersTableName = "users"
+
 type User struct {
 	ID        int       `db:"id" fieldtag:"pk" json:"id"`
 	Login     string    `db:"login" json:"login"`
@@ -47,8 +49,8 @@ func (u *UserRepo) Create(ctx context.Context, user *User) *User {
 	user.Active = true
 	user.CreatedAt = time.Now()
 
-	sql, args := UserStruct.InsertInto("users", user).
-		BuildWithFlavor(sqlbuilder.PostgreSQL) // todo
+	sql, args := UserStruct.InsertInto(UsersTableName, user).
+		BuildWithFlavor(sqlbuilder.PostgreSQL)
 
 	row := u.dbPool.QueryRow(ctx, sql, args...)
 	rowScanErr := row.Scan()
@@ -61,7 +63,7 @@ func (u *UserRepo) Create(ctx context.Context, user *User) *User {
 
 func (u *UserRepo) BlockByID(ctx context.Context, userID string) bool {
 
-	ub := sqlbuilder.Update("users")
+	ub := sqlbuilder.Update(UsersTableName)
 	sql, args := ub.Where(ub.Equal("id", userID)).
 		Set(ub.Assign("active", false)).
 		BuildWithFlavor(sqlbuilder.PostgreSQL)
@@ -75,7 +77,7 @@ func (u *UserRepo) BlockByID(ctx context.Context, userID string) bool {
 }
 
 func (u *UserRepo) GetByID(ctx context.Context, userID int) *User {
-	sb := UserStruct.SelectFrom("users")
+	sb := UserStruct.SelectFrom(UsersTableName)
 	sql, args := sb.Where(sb.Equal("id", userID)).
 		BuildWithFlavor(sqlbuilder.PostgreSQL)
 	row := u.dbPool.QueryRow(ctx, sql, args...)
@@ -90,7 +92,7 @@ func (u *UserRepo) GetByID(ctx context.Context, userID int) *User {
 }
 
 func (u *UserRepo) GetByLogin(ctx context.Context, userLogin string) (*User, error) {
-	sb := UserStruct.SelectFrom("users")
+	sb := UserStruct.SelectFrom(UsersTableName)
 	sql, args := sb.Where(sb.Equal("login", userLogin)).
 		BuildWithFlavor(sqlbuilder.PostgreSQL)
 	row := u.dbPool.QueryRow(ctx, sql, args...)
@@ -104,7 +106,7 @@ func (u *UserRepo) GetByLogin(ctx context.Context, userLogin string) (*User, err
 }
 
 func (u *UserRepo) GetAll(ctx context.Context) []User {
-	sql, _ := UserStruct.SelectFrom("users").
+	sql, _ := UserStruct.SelectFrom(UsersTableName).
 		OrderBy("id").
 		BuildWithFlavor(sqlbuilder.PostgreSQL)
 

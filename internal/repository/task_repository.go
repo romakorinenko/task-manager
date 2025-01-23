@@ -12,6 +12,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const TasksTableName = "tasks"
+
 type Task struct {
 	ID          int       `db:"id" json:"id"`
 	Title       string    `db:"title" json:"title"`
@@ -23,11 +25,23 @@ type Task struct {
 	UserID      int       `db:"user_id" json:"userId,omitempty"`
 }
 
+type TaskWithLogin struct {
+	ID          int       `db:"id"`
+	Title       string    `db:"title"`
+	Description string    `db:"description"`
+	Priority    int       `db:"priority"`
+	Status      string    `db:"status"`
+	CreatedAt   time.Time `db:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at"`
+	UserLogin   string    `db:"login"`
+}
+
 var TaskStruct = sqlbuilder.NewStruct(new(Task))
+var TaskWithLoginStruct = sqlbuilder.NewStruct(new(TaskWithLogin))
 
 type ITaskRepo interface {
-	Create(ctx context.Context, task *Task) (*Task, error)
-	Update(ctx context.Context, task *Task) (*Task, error)
+	Create(ctx context.Context, task *Task) (int, error)
+	Update(ctx context.Context, task *Task) error
 	DeleteByID(ctx context.Context, taskID int) error
 	GetByID(ctx context.Context, taskID int) (*Task, error)
 	GetByUserID(ctx context.Context, userID int) ([]Task, error)
@@ -35,6 +49,9 @@ type ITaskRepo interface {
 	GetAll(ctx context.Context) ([]Task, error)
 	GetByStatus(ctx context.Context, status string) ([]Task, error)
 	GetByPriority(ctx context.Context, priority int) ([]Task, error)
+	GetTasksWithLogin(ctx context.Context) ([]TaskWithLogin, error)
+	GetTasksWithLoginByUserID(ctx context.Context, userID int) ([]TaskWithLogin, error)
+	GetTaskWithLoginByID(ctx context.Context, taskID int) (*TaskWithLogin, error)
 }
 
 type TaskRepo struct {
@@ -45,32 +62,29 @@ func NewTaskRepo(dbPool *pgxpool.Pool) *TaskRepo {
 	return &TaskRepo{dbPool: dbPool}
 }
 
-func (t *TaskRepo) Create(ctx context.Context, task *Task) (*Task, error) {
+func (t *TaskRepo) Create(ctx context.Context, task *Task) (int, error) {
 	ID, err := t.generateNextTaskID(ctx)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	now := time.Now()
 	task.ID = ID
-	task.CreatedAt = now
-	task.UpdatedAt = now
-	sql, args := TaskStruct.InsertInto("tasks", task).
-		BuildWithFlavor(sqlbuilder.PostgreSQL) // todo
+	sql, args := TaskStruct.InsertInto(TasksTableName, task).
+		BuildWithFlavor(sqlbuilder.PostgreSQL)
 
 	row := t.dbPool.QueryRow(ctx, sql, args...)
 	rowScanErr := row.Scan()
 	if rowScanErr != nil && !errors.Is(rowScanErr, pgx.ErrNoRows) {
-		return nil, err
+		return 0, err
 	}
 
-	return task, nil
+	return task.ID, nil
 }
 
-func (t *TaskRepo) Update(ctx context.Context, task *Task) (*Task, error) {
+func (t *TaskRepo) Update(ctx context.Context, task *Task) error {
 	task.UpdatedAt = time.Now()
 
-	ub := sqlbuilder.Update("tasks")
+	ub := sqlbuilder.Update(TasksTableName)
 	sql, args := ub.Where(ub.Equal("id", task.ID)).
 		Set(
 			ub.Assign("title", task.Title),
@@ -83,14 +97,14 @@ func (t *TaskRepo) Update(ctx context.Context, task *Task) (*Task, error) {
 
 	_, err := t.dbPool.Exec(ctx, sql, args...)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return task, nil
+	return nil
 }
 
 func (t *TaskRepo) DeleteByID(ctx context.Context, taskID int) error {
-	db := TaskStruct.DeleteFrom("tasks")
+	db := TaskStruct.DeleteFrom(TasksTableName)
 	sql, args := db.Where(db.Equal("id", taskID)).
 		BuildWithFlavor(sqlbuilder.PostgreSQL)
 
@@ -99,7 +113,7 @@ func (t *TaskRepo) DeleteByID(ctx context.Context, taskID int) error {
 }
 
 func (t *TaskRepo) GetByID(ctx context.Context, taskID int) (*Task, error) {
-	sb := TaskStruct.SelectFrom("tasks")
+	sb := TaskStruct.SelectFrom(TasksTableName)
 	sql, args := sb.Where(sb.Equal("id", taskID)).
 		BuildWithFlavor(sqlbuilder.PostgreSQL)
 	row := t.dbPool.QueryRow(ctx, sql, args...)
@@ -114,7 +128,7 @@ func (t *TaskRepo) GetByID(ctx context.Context, taskID int) (*Task, error) {
 }
 
 func (t *TaskRepo) GetByUserID(ctx context.Context, userID int) ([]Task, error) {
-	sb := TaskStruct.SelectFrom("tasks")
+	sb := TaskStruct.SelectFrom(TasksTableName)
 	sql, args := sb.Where(sb.Equal("user_id", userID)).
 		BuildWithFlavor(sqlbuilder.PostgreSQL)
 
@@ -138,7 +152,7 @@ func (t *TaskRepo) GetByUserID(ctx context.Context, userID int) ([]Task, error) 
 }
 
 func (t *TaskRepo) GetByUserLogin(ctx context.Context, userLogin string) ([]Task, error) {
-	sb := TaskStruct.SelectFrom("tasks")
+	sb := TaskStruct.SelectFrom(TasksTableName)
 	sql, args := sb.JoinWithOption(sqlbuilder.LeftJoin, "users", "tasks.user_id = users.id").
 		Where(sb.Equal("users.login", userLogin)).
 		BuildWithFlavor(sqlbuilder.PostgreSQL)
@@ -162,8 +176,84 @@ func (t *TaskRepo) GetByUserLogin(ctx context.Context, userLogin string) ([]Task
 	return res, nil
 }
 
+func (t *TaskRepo) GetTasksWithLogin(ctx context.Context) ([]TaskWithLogin, error) {
+	sb := sqlbuilder.NewSelectBuilder()
+	sql, _ := sb.Select("tasks.id", "tasks.title", "tasks.description", "tasks.priority", "tasks.status", "tasks.created_at", "tasks.updated_at", "users.login").
+		From("tasks").
+		JoinWithOption(sqlbuilder.LeftJoin, "users", "tasks.user_id = users.id").
+		BuildWithFlavor(sqlbuilder.PostgreSQL)
+
+	rows, err := t.dbPool.Query(ctx, sql)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	res := make([]TaskWithLogin, 0)
+	for rows.Next() {
+		var task TaskWithLogin
+		rowScanErr := rows.Scan(TaskWithLoginStruct.Addr(&task)...)
+		if rowScanErr != nil {
+			slog.Error("", rowScanErr)
+			return nil, rowScanErr
+		}
+		res = append(res, task)
+	}
+	return res, nil
+}
+
+func (t *TaskRepo) GetTasksWithLoginByUserID(ctx context.Context, userID int) ([]TaskWithLogin, error) {
+	sb := sqlbuilder.NewSelectBuilder()
+	sql, args := sb.Select("tasks.id", "tasks.title", "tasks.description", "tasks.priority", "tasks.status", "tasks.created_at", "tasks.updated_at", "users.login").
+		From(TasksTableName).
+		JoinWithOption(sqlbuilder.LeftJoin, "users", "tasks.user_id = users.id").
+		Where(sb.Equal("users.id", userID)).
+		BuildWithFlavor(sqlbuilder.PostgreSQL)
+
+	rows, err := t.dbPool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	res := make([]TaskWithLogin, 0)
+	for rows.Next() {
+		var task TaskWithLogin
+		rowScanErr := rows.Scan(TaskWithLoginStruct.Addr(&task)...)
+		if rowScanErr != nil {
+			slog.Error("", rowScanErr)
+			return nil, rowScanErr
+		}
+		res = append(res, task)
+	}
+
+	return res, nil
+}
+
+func (t *TaskRepo) GetTaskWithLoginByID(ctx context.Context, taskID int) (*TaskWithLogin, error) {
+	sb := sqlbuilder.NewSelectBuilder()
+	sql, args := sb.Select(
+		"tasks.id", "tasks.title", "tasks.description", "tasks.priority", "tasks.status",
+		"tasks.created_at", "tasks.updated_at", "users.login",
+	).
+		From(TasksTableName).
+		JoinWithOption(sqlbuilder.LeftJoin, "users", "tasks.user_id = users.id").
+		Where(sb.Equal("tasks.id", taskID)).
+		BuildWithFlavor(sqlbuilder.PostgreSQL)
+
+	row := t.dbPool.QueryRow(ctx, sql, args...)
+
+	var task TaskWithLogin
+	rowScanErr := row.Scan(TaskWithLoginStruct.Addr(&task)...)
+	if rowScanErr != nil && errors.Is(rowScanErr, pgx.ErrNoRows) {
+		return nil, rowScanErr
+	}
+
+	return &task, nil
+}
+
 func (t *TaskRepo) GetAll(ctx context.Context) ([]Task, error) {
-	sql, _ := TaskStruct.SelectFrom("tasks").
+	sql, _ := TaskStruct.SelectFrom(TasksTableName).
 		OrderBy("id").
 		BuildWithFlavor(sqlbuilder.PostgreSQL)
 
@@ -188,7 +278,7 @@ func (t *TaskRepo) GetAll(ctx context.Context) ([]Task, error) {
 }
 
 func (t *TaskRepo) GetByStatus(ctx context.Context, status string) ([]Task, error) {
-	sb := TaskStruct.SelectFrom("tasks")
+	sb := TaskStruct.SelectFrom(TasksTableName)
 	sql, args := sb.Where(sb.Equal("status", status)).
 		OrderBy("id").
 		BuildWithFlavor(sqlbuilder.PostgreSQL)
@@ -214,7 +304,7 @@ func (t *TaskRepo) GetByStatus(ctx context.Context, status string) ([]Task, erro
 }
 
 func (t *TaskRepo) GetByPriority(ctx context.Context, priority int) ([]Task, error) {
-	sb := TaskStruct.SelectFrom("tasks")
+	sb := TaskStruct.SelectFrom(TasksTableName)
 	sql, args := sb.Where(sb.Equal("priority", priority)).
 		OrderBy("id").
 		BuildWithFlavor(sqlbuilder.PostgreSQL)
