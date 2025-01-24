@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/romakorinenko/task-manager/internal/errs"
 	"github.com/romakorinenko/task-manager/internal/repository"
@@ -29,11 +28,13 @@ func (u *UserService) GetUserRepository() repository.IUserRepo {
 }
 
 func (u *UserService) Create(ctx context.Context, user *repository.User) error {
-	_, err := u.userRepository.GetByLogin(ctx, user.Login)
+	userFromDB, err := u.userRepository.GetByLogin(ctx, user.Login)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return errs.UserExistsErr{}
-	} else if err != nil {
 		return err
+	}
+
+	if userFromDB != nil {
+		return errs.UserExistsErr{}
 	}
 
 	createdUser := u.userRepository.Create(ctx, user)

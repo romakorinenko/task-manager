@@ -64,7 +64,7 @@ func (t *TaskController) GetByUserLogin(c *gin.Context) {
 // @Summary Get All Tasks
 // @Description возвращает список задач в зависимости от роли:
 // @Description для администраторов - все задачи, для пользователей - задачи пользователя
-// @Tags tasks
+// @Tags pages
 // @Produce json
 // @Success 200 {array} repository.Task "List of tasks"
 // @Failure 401 {object} dto.ResponseMap
@@ -230,7 +230,7 @@ func (t *TaskController) Delete(c *gin.Context) {
 // @Success 302 {object} dto.ResponseMap
 // @Failure 400 {object} dto.ResponseMap
 // @Failure 500 {object} dto.ResponseMap
-// @Router /tasks/create [post]
+// @Router /tasks [post]
 func (t *TaskController) Create(c *gin.Context) {
 	title := c.PostForm("Title")
 	description := c.PostForm("Description")

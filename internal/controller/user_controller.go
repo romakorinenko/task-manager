@@ -130,13 +130,15 @@ func (u *UserController) Create(c *gin.Context) {
 	}
 
 	err := u.UserService.Create(c.Request.Context(), &newUser)
-	if err == nil {
-		c.JSON(http.StatusCreated, dto.ResponseMap{"message": fmt.Sprintf("user '%s' created", newUser.Login)})
-	} else if err != nil && errors.Is(err, errs.UserExistsErr{}) {
+	if err != nil && errors.Is(err, errs.UserExistsErr{}) {
 		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": fmt.Sprintf("user '%s' already exists", newUser.Login)})
-	} else {
+		return
+	} else if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseMap{"error": err.Error()})
+		return
 	}
+
+	c.JSON(http.StatusCreated, dto.ResponseMap{"message": fmt.Sprintf("user '%s' created", newUser.Login)})
 }
 
 // Block блокирует пользователя по идентификатору.
@@ -147,7 +149,7 @@ func (u *UserController) Create(c *gin.Context) {
 // @Param id path string true "User ID"
 // @Success 200 {object} dto.ResponseMap
 // @Failure 400 {object} dto.ResponseMap
-// @Router /users/{id}/block [post]
+// @Router /users/{id}/block [put]
 func (u *UserController) Block(c *gin.Context) {
 	userID := c.Param("id")
 
