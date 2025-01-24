@@ -4,7 +4,6 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/contrib/sessions"
@@ -33,11 +32,10 @@ type IUserController interface {
 
 type UserController struct {
 	UserService service.IUserService
-	TaskService service.ITaskService
 }
 
-func NewUserController(userService service.IUserService, taskService service.ITaskService) *UserController {
-	return &UserController{UserService: userService, TaskService: taskService}
+func NewUserController(userService service.IUserService) *UserController {
+	return &UserController{UserService: userService}
 }
 
 // GetMainPage открывает главную страницу приложения.
@@ -77,14 +75,14 @@ func (u *UserController) Login(c *gin.Context) {
 
 	user := u.UserService.GetByLogin(c.Request.Context(), username)
 	if user == nil {
-		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": "bad request"})
+		c.JSON(http.StatusUnauthorized, dto.ResponseMap{"error": "invalid credentials"})
+		return
 	}
 
 	if username == user.Login && password == user.Password {
 		session := sessions.Default(c)
 		session.Set(constant.UserSessionKey, user)
 		if err := session.Save(); err != nil {
-			slog.Error("error", err.Error())
 			c.JSON(http.StatusInternalServerError, dto.ResponseMap{"message": "internal server error"})
 			return
 		}

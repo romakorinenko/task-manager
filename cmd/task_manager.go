@@ -38,7 +38,7 @@ func main() {
 
 	userService := service.NewUserService(repository.NewUserRepo(dbPool))
 	taskService := service.NewTaskService(repository.NewTaskRepo(dbPool), repository.NewUserRepo(dbPool))
-	userController := controller.NewUserController(userService, taskService)
+	userController := controller.NewUserController(userService)
 	taskController := controller.NewTaskController(taskService, userService)
 
 	server.RegisterServerAndHandlers(userController, taskController, cfg.Server.Port)
