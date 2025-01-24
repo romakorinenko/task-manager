@@ -1,0 +1,7 @@
+server:
+  port: 8080
+  readHeaderTimeout: 5s
+
+db:
+#  connectionString: "postgres://postgres:postgres@localhost:55433/test_db?sslmode=disable" # local
+  connectionString: "postgres://postgres:postgres@app_postgres:5432/test_db?sslmode=disable" # docker

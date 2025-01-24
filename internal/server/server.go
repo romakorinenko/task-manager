@@ -1,7 +1,9 @@
 package server
 
 import (
+	"embed"
 	"fmt"
+	"html/template"
 	"log/slog"
 	"net/http"
 
@@ -15,6 +17,9 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+//go:embed templates/*
+var templates embed.FS
+
 var Router *gin.Engine
 
 func RegisterServerAndHandlers(
@@ -23,7 +28,8 @@ func RegisterServerAndHandlers(
 	port int,
 ) {
 	Router = gin.Default()
-	Router.LoadHTMLGlob("templates/*")
+	tmpl := template.Must(template.ParseFS(templates, "templates/*.html"))
+	Router.SetHTMLTemplate(tmpl)
 	store := sessions.NewCookieStore([]byte("secret"))
 	Router.Use(sessions.Sessions("sessions", store))
 

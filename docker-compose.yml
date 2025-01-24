@@ -1,0 +1,35 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      - app_network
+    depends_on:
+      - app_postgres
+    restart: unless-stopped
+
+  app_postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: test_db
+    networks:
+      - app_network
+    ports:
+      - 55433:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    command: [ "postgres", "-c", "log_statement=all" ]
+
+networks:
+  app_network:
+
+volumes:
+  pgdata:
