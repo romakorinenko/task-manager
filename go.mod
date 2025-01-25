@@ -15,6 +15,7 @@ require (
 	github.com/swaggo/swag v1.16.4
 	github.com/testcontainers/testcontainers-go v0.35.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.35.0
+	go.uber.org/mock v0.5.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

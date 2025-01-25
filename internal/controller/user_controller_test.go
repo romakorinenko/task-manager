@@ -14,23 +14,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/contrib/sessions"
-	"github.com/gin-gonic/gin"
 	"github.com/romakorinenko/task-manager/internal/constant"
 	"github.com/romakorinenko/task-manager/internal/repository"
 	"github.com/romakorinenko/task-manager/internal/service"
 	"github.com/romakorinenko/task-manager/test"
 	"github.com/stretchr/testify/require"
 )
-
-func SetUpRouter() *gin.Engine {
-	router := gin.Default()
-	store := sessions.NewCookieStore([]byte("secret"))
-	router.Use(sessions.Sessions("sessions", store))
-	router.LoadHTMLGlob("../server/templates/*.html")
-
-	return router
-}
 
 func TestUserController_Login(t *testing.T) {
 	ctx := context.Background()
@@ -53,7 +42,7 @@ func TestUserController_Login(t *testing.T) {
 		},
 	)
 
-	r := SetUpRouter()
+	r := test.SetUpTestRouter()
 	r.POST("/login", userController.Login)
 
 	t.Run("успешное создание сессии", func(t *testing.T) {
@@ -111,7 +100,7 @@ func TestUserController_Logout(t *testing.T) {
 		},
 	)
 
-	r := SetUpRouter()
+	r := test.SetUpTestRouter()
 	r.POST("/logout", userController.Logout)
 
 	t.Run("пользователь разлогинен, сессия удалена", func(t *testing.T) {
@@ -148,7 +137,7 @@ func TestUserController_GetMainPage(t *testing.T) {
 		},
 	)
 
-	r := SetUpRouter()
+	r := test.SetUpTestRouter()
 	r.GET("/", userController.GetMainPage)
 
 	t.Run("откроет страницу логина", func(t *testing.T) {
@@ -185,7 +174,7 @@ func TestUserController_Create(t *testing.T) {
 		},
 	)
 
-	r := SetUpRouter()
+	r := test.SetUpTestRouter()
 	r.POST("/users", userController.Create)
 
 	t.Run("получен невалидный JSON в теле", func(t *testing.T) {
@@ -264,7 +253,7 @@ func TestUserController_Block(t *testing.T) {
 		},
 	)
 
-	r := SetUpRouter()
+	r := test.SetUpTestRouter()
 	r.PUT("/users/:id/block", userController.Block)
 
 	t.Run("пользователь заблокирован", func(t *testing.T) {
@@ -310,7 +299,7 @@ func TestUserController_GetAll(t *testing.T) {
 	userService := service.NewUserService(userRepo)
 	userController := NewUserController(userService)
 
-	r := SetUpRouter()
+	r := test.SetUpTestRouter()
 	r.GET("/users", userController.GetAll)
 
 	req := httptest.NewRequest(http.MethodGet, "/users", nil)

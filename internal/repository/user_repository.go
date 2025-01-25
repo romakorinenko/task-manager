@@ -1,5 +1,7 @@
 package repository
 
+//go:generate mockgen -source=user_repository.go -destination=mocks/user_repository_mocks.go
+
 import (
 	"context"
 	"errors"
@@ -27,7 +29,6 @@ var UserStruct = sqlbuilder.NewStruct(new(User))
 type IUserRepo interface {
 	Create(ctx context.Context, user *User) *User
 	BlockByID(ctx context.Context, userID string) bool
-	GetByID(ctx context.Context, userID int) *User
 	GetByLogin(ctx context.Context, userLogin string) (*User, error)
 	GetAll(ctx context.Context) []User
 }
@@ -74,21 +75,6 @@ func (u *UserRepo) BlockByID(ctx context.Context, userID string) bool {
 	}
 
 	return true
-}
-
-func (u *UserRepo) GetByID(ctx context.Context, userID int) *User {
-	sb := UserStruct.SelectFrom(UsersTableName)
-	sql, args := sb.Where(sb.Equal("id", userID)).
-		BuildWithFlavor(sqlbuilder.PostgreSQL)
-	row := u.dbPool.QueryRow(ctx, sql, args...)
-
-	var user User
-	rowScanErr := row.Scan(UserStruct.Addr(&user)...)
-	if rowScanErr != nil && errors.Is(rowScanErr, pgx.ErrNoRows) {
-		return nil
-	}
-
-	return &user
 }
 
 func (u *UserRepo) GetByLogin(ctx context.Context, userLogin string) (*User, error) {

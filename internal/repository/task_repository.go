@@ -1,5 +1,7 @@
 package repository
 
+//go:generate mockgen -source=task_repository.go -destination=mocks/task_repository_mocks.go
+
 import (
 	"context"
 	"errors"
@@ -44,9 +46,7 @@ type ITaskRepo interface {
 	Update(ctx context.Context, task *Task) error
 	DeleteByID(ctx context.Context, taskID int) error
 	GetByID(ctx context.Context, taskID int) (*Task, error)
-	GetByUserID(ctx context.Context, userID int) ([]Task, error)
 	GetByUserLogin(ctx context.Context, userLogin string) ([]Task, error)
-	GetAll(ctx context.Context) ([]Task, error)
 	GetByStatus(ctx context.Context, status string) ([]Task, error)
 	GetByPriority(ctx context.Context, priority int) ([]Task, error)
 	GetTasksWithLogin(ctx context.Context) ([]TaskWithLogin, error)
@@ -125,30 +125,6 @@ func (t *TaskRepo) GetByID(ctx context.Context, taskID int) (*Task, error) {
 	}
 
 	return &task, nil
-}
-
-func (t *TaskRepo) GetByUserID(ctx context.Context, userID int) ([]Task, error) {
-	sb := TaskStruct.SelectFrom(TasksTableName)
-	sql, args := sb.Where(sb.Equal("user_id", userID)).
-		BuildWithFlavor(sqlbuilder.PostgreSQL)
-
-	rows, err := t.dbPool.Query(ctx, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	res := make([]Task, 0)
-	for rows.Next() {
-		var task Task
-		rowScanErr := rows.Scan(TaskStruct.Addr(&task)...)
-		if rowScanErr != nil {
-			return nil, rowScanErr
-		}
-		res = append(res, task)
-	}
-
-	return res, nil
 }
 
 func (t *TaskRepo) GetByUserLogin(ctx context.Context, userLogin string) ([]Task, error) {
@@ -250,31 +226,6 @@ func (t *TaskRepo) GetTaskWithLoginByID(ctx context.Context, taskID int) (*TaskW
 	}
 
 	return &task, nil
-}
-
-func (t *TaskRepo) GetAll(ctx context.Context) ([]Task, error) {
-	sql, _ := TaskStruct.SelectFrom(TasksTableName).
-		OrderBy("id").
-		BuildWithFlavor(sqlbuilder.PostgreSQL)
-
-	rows, err := t.dbPool.Query(ctx, sql)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	res := make([]Task, 0)
-	for rows.Next() {
-		var task Task
-		if rowScanErr := rows.Scan(TaskStruct.Addr(&task)...); rowScanErr != nil {
-			slog.Info(err.Error())
-			return nil, err
-		}
-
-		res = append(res, task)
-	}
-
-	return res, nil
 }
 
 func (t *TaskRepo) GetByStatus(ctx context.Context, status string) ([]Task, error) {
