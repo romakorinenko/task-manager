@@ -1,8 +1,8 @@
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/romakorinenko/task-manager/tests.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/romakorinenko/task-manager)](https://goreportcard.com/report/github.com/romakorinenko/task-manager)
+[![Coverage Status](https://coveralls.io/repos/github/romakorinenko/task-manager/badge.svg?branch=create_task_manager)](https://coveralls.io/github/romakorinenko/task-manager?branch=create_task_manager)
+
 # Программа для управления задачами
-[![Go](https://github.com/romakorinenko/task-manager/workflows/Go/badge.svg)](https://github.com/romakorinenko/task-manager/actions)
-
-[![Go Report](https://goreportcard.com/report/github.com/romakorinenko/task-manager)](https://goreportcard.com/report/github.com/romakorinenko/task-manager)
-
 
 ### Описание:
 Task Manager - это многопользовательский веб-сервис для ведения рабочих задач. В настоящий момент существует функционал 
@@ -49,3 +49,4 @@ Task Manager - это многопользовательский веб-серв
 без использования js не позволяет выполнять запросы с другими методами
 - дополнить swagger описаниями передаваемых параметров
 - добавить графану с дэшбордами
+- повысить покрытие тестами
