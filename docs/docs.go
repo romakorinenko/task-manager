@@ -43,7 +43,7 @@ const docTemplate = `{
         },
         "/login": {
             "post": {
-                "description": "аутентификация пользозователя и создание сессии",
+                "description": "аутентификация пользователя и создание сессии",
                 "consumes": [
                     "application/x-www-form-urlencoded"
                 ],
@@ -120,12 +120,12 @@ const docTemplate = `{
         },
         "/tasks": {
             "get": {
-                "description": "возвращает список задач в зависимости от роли:\nдля админов - все задачи, для пользователей - задачи пользователя",
+                "description": "возвращает список задач в зависимости от роли:\nдля администраторов - все задачи, для пользователей - задачи пользователя",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "tasks"
+                    "pages"
                 ],
                 "summary": "Get All Tasks",
                 "responses": {
@@ -142,134 +142,6 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/dto.ResponseMap"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ResponseMap"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ResponseMap"
-                        }
-                    }
-                }
-            }
-        },
-        "/tasks/by-priority/{priority}": {
-            "get": {
-                "description": "Возвращает список задач с указанным приоритетом. Только для админов",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "tasks-admins"
-                ],
-                "summary": "Get Tasks by priority",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Приоритет задачи",
-                        "name": "priority",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/repository.Task"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ResponseMap"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ResponseMap"
-                        }
-                    }
-                }
-            }
-        },
-        "/tasks/by-status/{status}": {
-            "get": {
-                "description": "Возвращает список задач с указанным статусом. Статус должен быть одним из: OPEN, IN_PROGRESS или DONE.\nТолько для админов",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "tasks-admins"
-                ],
-                "summary": "Get Tasks by status",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Статус задачи",
-                        "name": "status",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/repository.Task"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ResponseMap"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ResponseMap"
-                        }
-                    }
-                }
-            }
-        },
-        "/tasks/create": {
-            "get": {
-                "description": "Отображает страницу создания шаблона задачи для пользователя в зависимости от его роли.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "text/html"
-                ],
-                "tags": [
-                    "pages"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.UsersTemplateData"
                         }
                     },
                     "401": {
@@ -350,6 +222,134 @@ const docTemplate = `{
                 }
             }
         },
+        "/tasks/by-priority/{priority}": {
+            "get": {
+                "description": "Возвращает список задач с указанным приоритетом. Только для администраторов",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks-admins"
+                ],
+                "summary": "Get Tasks by priority",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Приоритет задачи",
+                        "name": "priority",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/repository.Task"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ResponseMap"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ResponseMap"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks/by-status/{status}": {
+            "get": {
+                "description": "Возвращает список задач с указанным статусом. Статус должен быть одним из: OPEN, IN_PROGRESS или DONE.\nТолько для администраторов",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks-admins"
+                ],
+                "summary": "Get Tasks by status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Статус задачи",
+                        "name": "status",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/repository.Task"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ResponseMap"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ResponseMap"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks/create": {
+            "get": {
+                "description": "Отображает страницу создания шаблона задачи для пользователя в зависимости от его роли.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "pages"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.UsersTemplateData"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ResponseMap"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ResponseMap"
+                        }
+                    }
+                }
+            }
+        },
         "/tasks/user/{login}": {
             "get": {
                 "description": "возвращает задачи пользователя по его логину",
@@ -411,7 +411,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.TaskTemplateData"
+                            "$ref": "#/definitions/repository.TaskWithLogin"
                         }
                     },
                     "400": {
@@ -559,7 +559,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.TaskTemplateData"
+                            "$ref": "#/definitions/repository.TaskWithLogin"
                         }
                     },
                     "400": {
@@ -573,7 +573,7 @@ const docTemplate = `{
         },
         "/users": {
             "get": {
-                "description": "возвращает список всех пользователей, только для админов",
+                "description": "возвращает список всех пользователей, только для администраторов",
                 "produces": [
                     "application/json"
                 ],
@@ -600,7 +600,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "создает нового пользователя, только для админов",
+                "description": "создает нового пользователя, только для администраторов",
                 "consumes": [
                     "application/json"
                 ],
@@ -639,8 +639,8 @@ const docTemplate = `{
             }
         },
         "/users/{id}/block": {
-            "post": {
-                "description": "блокирует пользователя по идентификатору, только для админов",
+            "put": {
+                "description": "блокирует пользователя по идентификатору, только для администраторов",
                 "produces": [
                     "application/json"
                 ],
@@ -681,35 +681,6 @@ const docTemplate = `{
                 "type": "string"
             }
         },
-        "dto.TaskTemplateData": {
-            "type": "object",
-            "properties": {
-                "createdAt": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "priority": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "updatedAt": {
-                    "type": "string"
-                },
-                "userLogin": {
-                    "type": "string"
-                }
-            }
-        },
         "dto.UsersTemplateData": {
             "type": "object",
             "properties": {
@@ -747,6 +718,35 @@ const docTemplate = `{
                 },
                 "userId": {
                     "type": "integer"
+                }
+            }
+        },
+        "repository.TaskWithLogin": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "priority": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "userLogin": {
+                    "type": "string"
                 }
             }
         },

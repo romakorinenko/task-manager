@@ -1,5 +1,7 @@
 package repository
 
+//go:generate mockgen -source=task_repository.go -destination=mocks/task_repository_mocks.go
+
 import (
 	"context"
 	"errors"
@@ -36,17 +38,17 @@ type TaskWithLogin struct {
 	UserLogin   string    `db:"login"`
 }
 
-var TaskStruct = sqlbuilder.NewStruct(new(Task))
-var TaskWithLoginStruct = sqlbuilder.NewStruct(new(TaskWithLogin))
+var (
+	TaskStruct          = sqlbuilder.NewStruct(new(Task))
+	TaskWithLoginStruct = sqlbuilder.NewStruct(new(TaskWithLogin))
+)
 
 type ITaskRepo interface {
 	Create(ctx context.Context, task *Task) (int, error)
 	Update(ctx context.Context, task *Task) error
 	DeleteByID(ctx context.Context, taskID int) error
 	GetByID(ctx context.Context, taskID int) (*Task, error)
-	GetByUserID(ctx context.Context, userID int) ([]Task, error)
 	GetByUserLogin(ctx context.Context, userLogin string) ([]Task, error)
-	GetAll(ctx context.Context) ([]Task, error)
 	GetByStatus(ctx context.Context, status string) ([]Task, error)
 	GetByPriority(ctx context.Context, priority int) ([]Task, error)
 	GetTasksWithLogin(ctx context.Context) ([]TaskWithLogin, error)
@@ -127,30 +129,6 @@ func (t *TaskRepo) GetByID(ctx context.Context, taskID int) (*Task, error) {
 	return &task, nil
 }
 
-func (t *TaskRepo) GetByUserID(ctx context.Context, userID int) ([]Task, error) {
-	sb := TaskStruct.SelectFrom(TasksTableName)
-	sql, args := sb.Where(sb.Equal("user_id", userID)).
-		BuildWithFlavor(sqlbuilder.PostgreSQL)
-
-	rows, err := t.dbPool.Query(ctx, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	res := make([]Task, 0)
-	for rows.Next() {
-		var task Task
-		rowScanErr := rows.Scan(TaskStruct.Addr(&task)...)
-		if rowScanErr != nil {
-			return nil, rowScanErr
-		}
-		res = append(res, task)
-	}
-
-	return res, nil
-}
-
 func (t *TaskRepo) GetByUserLogin(ctx context.Context, userLogin string) ([]Task, error) {
 	sb := TaskStruct.SelectFrom(TasksTableName)
 	sql, args := sb.JoinWithOption(sqlbuilder.LeftJoin, "users", "tasks.user_id = users.id").
@@ -178,7 +156,15 @@ func (t *TaskRepo) GetByUserLogin(ctx context.Context, userLogin string) ([]Task
 
 func (t *TaskRepo) GetTasksWithLogin(ctx context.Context) ([]TaskWithLogin, error) {
 	sb := sqlbuilder.NewSelectBuilder()
-	sql, _ := sb.Select("tasks.id", "tasks.title", "tasks.description", "tasks.priority", "tasks.status", "tasks.created_at", "tasks.updated_at", "users.login").
+	sql, _ := sb.Select("tasks.id",
+		"tasks.title",
+		"tasks.description",
+		"tasks.priority",
+		"tasks.status",
+		"tasks.created_at",
+		"tasks.updated_at",
+		"users.login",
+	).
 		From("tasks").
 		JoinWithOption(sqlbuilder.LeftJoin, "users", "tasks.user_id = users.id").
 		BuildWithFlavor(sqlbuilder.PostgreSQL)
@@ -194,7 +180,6 @@ func (t *TaskRepo) GetTasksWithLogin(ctx context.Context) ([]TaskWithLogin, erro
 		var task TaskWithLogin
 		rowScanErr := rows.Scan(TaskWithLoginStruct.Addr(&task)...)
 		if rowScanErr != nil {
-			slog.Error("", rowScanErr)
 			return nil, rowScanErr
 		}
 		res = append(res, task)
@@ -204,7 +189,16 @@ func (t *TaskRepo) GetTasksWithLogin(ctx context.Context) ([]TaskWithLogin, erro
 
 func (t *TaskRepo) GetTasksWithLoginByUserID(ctx context.Context, userID int) ([]TaskWithLogin, error) {
 	sb := sqlbuilder.NewSelectBuilder()
-	sql, args := sb.Select("tasks.id", "tasks.title", "tasks.description", "tasks.priority", "tasks.status", "tasks.created_at", "tasks.updated_at", "users.login").
+	sql, args := sb.Select(
+		"tasks.id",
+		"tasks.title",
+		"tasks.description",
+		"tasks.priority",
+		"tasks.status",
+		"tasks.created_at",
+		"tasks.updated_at",
+		"users.login",
+	).
 		From(TasksTableName).
 		JoinWithOption(sqlbuilder.LeftJoin, "users", "tasks.user_id = users.id").
 		Where(sb.Equal("users.id", userID)).
@@ -221,7 +215,6 @@ func (t *TaskRepo) GetTasksWithLoginByUserID(ctx context.Context, userID int) ([
 		var task TaskWithLogin
 		rowScanErr := rows.Scan(TaskWithLoginStruct.Addr(&task)...)
 		if rowScanErr != nil {
-			slog.Error("", rowScanErr)
 			return nil, rowScanErr
 		}
 		res = append(res, task)
@@ -250,31 +243,6 @@ func (t *TaskRepo) GetTaskWithLoginByID(ctx context.Context, taskID int) (*TaskW
 	}
 
 	return &task, nil
-}
-
-func (t *TaskRepo) GetAll(ctx context.Context) ([]Task, error) {
-	sql, _ := TaskStruct.SelectFrom(TasksTableName).
-		OrderBy("id").
-		BuildWithFlavor(sqlbuilder.PostgreSQL)
-
-	rows, err := t.dbPool.Query(ctx, sql)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	res := make([]Task, 0)
-	for rows.Next() {
-		var task Task
-		if rowScanErr := rows.Scan(TaskStruct.Addr(&task)...); rowScanErr != nil {
-			slog.Info(err.Error())
-			return nil, err
-		}
-
-		res = append(res, task)
-	}
-
-	return res, nil
 }
 
 func (t *TaskRepo) GetByStatus(ctx context.Context, status string) ([]Task, error) {

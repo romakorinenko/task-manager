@@ -58,7 +58,6 @@ func RegisterUserHandlers(userController controller.IUserController) {
 }
 
 func RegisterTaskHandlers(taskController controller.ITaskController) {
-
 	tasksRouterGroup := Router.Group("/tasks")
 	{
 		tasksRouterGroup.GET("/create", taskController.CreateTemplate)

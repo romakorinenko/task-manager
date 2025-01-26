@@ -4,7 +4,6 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/contrib/sessions"
@@ -33,11 +32,10 @@ type IUserController interface {
 
 type UserController struct {
 	UserService service.IUserService
-	TaskService service.ITaskService
 }
 
-func NewUserController(userService service.IUserService, taskService service.ITaskService) *UserController {
-	return &UserController{UserService: userService, TaskService: taskService}
+func NewUserController(userService service.IUserService) *UserController {
+	return &UserController{UserService: userService}
 }
 
 // GetMainPage открывает главную страницу приложения.
@@ -48,6 +46,7 @@ func NewUserController(userService service.IUserService, taskService service.ITa
 // @Success 302 {string} Redirected to /tasks
 // @Success 200 {object} dto.ResponseMap
 // @Router / [get]
+// .
 func (u *UserController) GetMainPage(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(constant.UserSessionKey)
@@ -71,20 +70,21 @@ func (u *UserController) GetMainPage(c *gin.Context) {
 // @Failure 401 {object} dto.ResponseMap
 // @Failure 500 {object} dto.ResponseMap
 // @Router /login [post]
+// .
 func (u *UserController) Login(c *gin.Context) {
 	username := c.PostForm("username")
 	password := c.PostForm("password")
 
 	user := u.UserService.GetByLogin(c.Request.Context(), username)
 	if user == nil {
-		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": "bad request"})
+		c.JSON(http.StatusUnauthorized, dto.ResponseMap{"error": "invalid credentials"})
+		return
 	}
 
 	if username == user.Login && password == user.Password {
 		session := sessions.Default(c)
 		session.Set(constant.UserSessionKey, user)
 		if err := session.Save(); err != nil {
-			slog.Error("error", err.Error())
 			c.JSON(http.StatusInternalServerError, dto.ResponseMap{"message": "internal server error"})
 			return
 		}
@@ -103,6 +103,7 @@ func (u *UserController) Login(c *gin.Context) {
 // @Success 302 {string} Redirected to main page
 // @Failure 500 {object} dto.ResponseMap
 // @Router /logout [get]
+// .
 func (u *UserController) Logout(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Delete(constant.UserSessionKey)
@@ -122,6 +123,7 @@ func (u *UserController) Logout(c *gin.Context) {
 // @Success 201 {object} dto.ResponseMap
 // @Failure 400 {object} dto.ResponseMap
 // @Router /users [post]
+// .
 func (u *UserController) Create(c *gin.Context) {
 	var newUser repository.User
 	if err := c.ShouldBindJSON(&newUser); err != nil {
@@ -130,13 +132,15 @@ func (u *UserController) Create(c *gin.Context) {
 	}
 
 	err := u.UserService.Create(c.Request.Context(), &newUser)
-	if err == nil {
-		c.JSON(http.StatusCreated, dto.ResponseMap{"message": fmt.Sprintf("user '%s' created", newUser.Login)})
-	} else if err != nil && errors.Is(err, errs.UserExistsErr{}) {
+	if err != nil && errors.Is(err, errs.UserExistsErr{}) {
 		c.JSON(http.StatusBadRequest, dto.ResponseMap{"error": fmt.Sprintf("user '%s' already exists", newUser.Login)})
-	} else {
+		return
+	} else if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ResponseMap{"error": err.Error()})
+		return
 	}
+
+	c.JSON(http.StatusCreated, dto.ResponseMap{"message": fmt.Sprintf("user '%s' created", newUser.Login)})
 }
 
 // Block блокирует пользователя по идентификатору.
@@ -147,7 +151,8 @@ func (u *UserController) Create(c *gin.Context) {
 // @Param id path string true "User ID"
 // @Success 200 {object} dto.ResponseMap
 // @Failure 400 {object} dto.ResponseMap
-// @Router /users/{id}/block [post]
+// @Router /users/{id}/block [put]
+// .
 func (u *UserController) Block(c *gin.Context) {
 	userID := c.Param("id")
 
@@ -166,6 +171,7 @@ func (u *UserController) Block(c *gin.Context) {
 // @Success 200 {array} repository.User "List of users"
 // @Failure 500 {object} dto.ResponseMap
 // @Router /users [get]
+// .
 func (u *UserController) GetAll(c *gin.Context) {
 	users := u.UserService.GetAll(c.Request.Context())
 	c.JSON(http.StatusOK, users)

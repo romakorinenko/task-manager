@@ -4,25 +4,6 @@ definitions:
     additionalProperties:
       type: string
     type: object
-  dto.TaskTemplateData:
-    properties:
-      createdAt:
-        type: string
-      description:
-        type: string
-      id:
-        type: integer
-      priority:
-        type: integer
-      status:
-        type: string
-      title:
-        type: string
-      updatedAt:
-        type: string
-      userLogin:
-        type: string
-    type: object
   dto.UsersTemplateData:
     properties:
       users:
@@ -48,6 +29,25 @@ definitions:
         type: string
       userId:
         type: integer
+    type: object
+  repository.TaskWithLogin:
+    properties:
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      priority:
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: string
+      userLogin:
+        type: string
     type: object
   repository.User:
     properties:
@@ -93,7 +93,7 @@ paths:
     post:
       consumes:
       - application/x-www-form-urlencoded
-      description: аутентификация пользозователя и создание сессии
+      description: аутентификация пользователя и создание сессии
       parameters:
       - description: Username
         in: formData
@@ -144,7 +144,7 @@ paths:
     get:
       description: |-
         возвращает список задач в зависимости от роли:
-        для админов - все задачи, для пользователей - задачи пользователя
+        для администраторов - все задачи, для пользователей - задачи пользователя
       produces:
       - application/json
       responses:
@@ -168,6 +168,50 @@ paths:
             $ref: '#/definitions/dto.ResponseMap'
       summary: Get All Tasks
       tags:
+      - pages
+    post:
+      consumes:
+      - application/json
+      description: 'Создаёт новую задачу с указанными параметрами: заголовком, описанием,
+        приоритетом и пользователем.'
+      parameters:
+      - description: Заголовок задачи
+        in: formData
+        name: Title
+        required: true
+        type: string
+      - description: Описание задачи
+        in: formData
+        name: Description
+        required: true
+        type: string
+      - description: Приоритет задачи (число)
+        in: formData
+        name: Priority
+        required: true
+        type: integer
+      - description: Логин пользователя, которому назначена задача
+        in: formData
+        name: UserLogin
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ResponseMap'
+      summary: Create task
+      tags:
       - tasks
   /tasks/{id}:
     get:
@@ -184,7 +228,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.TaskTemplateData'
+            $ref: '#/definitions/repository.TaskWithLogin'
         "400":
           description: Bad Request
           schema:
@@ -284,7 +328,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.TaskTemplateData'
+            $ref: '#/definitions/repository.TaskWithLogin'
         "400":
           description: Bad Request
           schema:
@@ -295,7 +339,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Возвращает список задач с указанным приоритетом. Только для админов
+      description: Возвращает список задач с указанным приоритетом. Только для администраторов
       parameters:
       - description: Приоритет задачи
         in: path
@@ -328,7 +372,7 @@ paths:
       - application/json
       description: |-
         Возвращает список задач с указанным статусом. Статус должен быть одним из: OPEN, IN_PROGRESS или DONE.
-        Только для админов
+        Только для администраторов
       parameters:
       - description: Статус задачи
         in: path
@@ -378,50 +422,6 @@ paths:
             $ref: '#/definitions/dto.ResponseMap'
       tags:
       - pages
-    post:
-      consumes:
-      - application/json
-      description: 'Создаёт новую задачу с указанными параметрами: заголовком, описанием,
-        приоритетом и пользователем.'
-      parameters:
-      - description: Заголовок задачи
-        in: formData
-        name: Title
-        required: true
-        type: string
-      - description: Описание задачи
-        in: formData
-        name: Description
-        required: true
-        type: string
-      - description: Приоритет задачи (число)
-        in: formData
-        name: Priority
-        required: true
-        type: integer
-      - description: Логин пользователя, которому назначена задача
-        in: formData
-        name: UserLogin
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "302":
-          description: Found
-          schema:
-            $ref: '#/definitions/dto.ResponseMap'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/dto.ResponseMap'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dto.ResponseMap'
-      summary: Create task
-      tags:
-      - tasks
   /tasks/user/{login}:
     get:
       description: возвращает задачи пользователя по его логину
@@ -449,7 +449,7 @@ paths:
       - tasks
   /users:
     get:
-      description: возвращает список всех пользователей, только для админов
+      description: возвращает список всех пользователей, только для администраторов
       produces:
       - application/json
       responses:
@@ -469,7 +469,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: создает нового пользователя, только для админов
+      description: создает нового пользователя, только для администраторов
       parameters:
       - description: New User Data
         in: body
@@ -492,8 +492,8 @@ paths:
       tags:
       - users-admins
   /users/{id}/block:
-    post:
-      description: блокирует пользователя по идентификатору, только для админов
+    put:
+      description: блокирует пользователя по идентификатору, только для администраторов
       parameters:
       - description: User ID
         in: path

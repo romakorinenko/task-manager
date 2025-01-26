@@ -6,19 +6,32 @@ linters-settings:
     lines: 150
     statements: 80
 
+  depguard:
+    rules:
+      prevent_unmaintained_packages:
+        list-mode: lax # allow unless explicitely denied
+        files:
+          - $all
+          - "!$test"
+        allow:
+          - $gostd
+        deny:
+          - pkg: io/ioutil
+            desc: "replaced by io and os packages since Go 1.16: https://tip.golang.org/doc/go1.16#ioutil"
+
 linters:
   disable-all: true
   enable:
     - asciicheck
     - bodyclose
-    - deadcode
+#    - deadcode inactivated
     - depguard
     - dogsled
     - dupl
     - durationcheck
     - errorlint
     - exhaustive
-    - exportloopref
+    -  copyloopvar #exportloopref is deprecated
     - funlen
     - gci
     - gocognit
@@ -35,7 +48,7 @@ linters:
     - gosec
     - gosimple
     - govet
-    - ifshort
+#    - ifshort inactivated
     - importas
     - ineffassign
     - lll
@@ -51,15 +64,15 @@ linters:
     - rowserrcheck
     - sqlclosecheck
     - staticcheck
-    - structcheck
+#    - structcheck inactivated
     - stylecheck
     - tagliatelle
     - thelper
     - tparallel
-    - typecheck
+#    - typecheck inactivated
     - unconvert
     - unparam
     - unused
-    - varcheck
+#    - varcheck inactivated
     - wastedassign
     - whitespace

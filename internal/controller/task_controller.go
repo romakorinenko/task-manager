@@ -49,6 +49,7 @@ func NewTaskController(taskService service.ITaskService, userService service.IUs
 // @Success 200 {array} repository.Task "List of tasks"
 // @Failure 500 {object} dto.ResponseMap
 // @Router /tasks/user/{login} [get]
+// .
 func (t *TaskController) GetByUserLogin(c *gin.Context) {
 	userLogin := c.Param("login")
 	tasks, err := t.TaskService.GetTaskRepository().GetByUserLogin(c.Request.Context(), userLogin)
@@ -64,13 +65,14 @@ func (t *TaskController) GetByUserLogin(c *gin.Context) {
 // @Summary Get All Tasks
 // @Description возвращает список задач в зависимости от роли:
 // @Description для администраторов - все задачи, для пользователей - задачи пользователя
-// @Tags tasks
+// @Tags pages
 // @Produce json
 // @Success 200 {array} repository.Task "List of tasks"
 // @Failure 401 {object} dto.ResponseMap
 // @Failure 500 {object} dto.ResponseMap
 // @Failure 400 {object} dto.ResponseMap
 // @Router /tasks [get]
+// .
 func (t *TaskController) GetAll(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(constant.UserSessionKey)
@@ -104,6 +106,7 @@ func (t *TaskController) GetAll(c *gin.Context) {
 // @Success 200 {object} repository.TaskWithLogin
 // @Failure 400 {object} dto.ResponseMap
 // @Router /tasks/{id} [get]
+// .
 func (t *TaskController) GetByID(c *gin.Context) {
 	IDParam := c.Param("id")
 	taskID, err := strconv.Atoi(IDParam)
@@ -129,6 +132,7 @@ func (t *TaskController) GetByID(c *gin.Context) {
 // @Success 200 {object} repository.TaskWithLogin
 // @Failure 400 {object} dto.ResponseMap
 // @Router /tasks/{id}/edit [get]
+// .
 func (t *TaskController) Edit(c *gin.Context) {
 	taskIDParam := c.Param("id")
 	taskID, err := strconv.Atoi(taskIDParam)
@@ -161,6 +165,7 @@ func (t *TaskController) Edit(c *gin.Context) {
 // @Failure 400 {object} dto.ResponseMap
 // @Failure 500 {object} dto.ResponseMap
 // @Router /tasks/{id} [post]
+// .
 func (t *TaskController) Update(c *gin.Context) {
 	title := c.PostForm("Title")
 	description := c.PostForm("Description")
@@ -201,6 +206,7 @@ func (t *TaskController) Update(c *gin.Context) {
 // @Failure 400 {object} dto.ResponseMap
 // @Failure 500 {object} dto.ResponseMap
 // @Router /tasks/{id}/delete [post]
+// .
 func (t *TaskController) Delete(c *gin.Context) {
 	taskIDParam := c.Param("id")
 	taskID, err := strconv.Atoi(taskIDParam)
@@ -230,7 +236,8 @@ func (t *TaskController) Delete(c *gin.Context) {
 // @Success 302 {object} dto.ResponseMap
 // @Failure 400 {object} dto.ResponseMap
 // @Failure 500 {object} dto.ResponseMap
-// @Router /tasks/create [post]
+// @Router /tasks [post]
+// .
 func (t *TaskController) Create(c *gin.Context) {
 	title := c.PostForm("Title")
 	description := c.PostForm("Description")
@@ -263,6 +270,7 @@ func (t *TaskController) Create(c *gin.Context) {
 // @Failure 401 {object} dto.ResponseMap
 // @Failure 500 {object} dto.ResponseMap
 // @Router /tasks/create [get]
+// .
 func (t *TaskController) CreateTemplate(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(constant.UserSessionKey)
@@ -300,6 +308,7 @@ func (t *TaskController) CreateTemplate(c *gin.Context) {
 // @Failure 400 {object} dto.ResponseMap
 // @Failure 500 {object} dto.ResponseMap
 // @Router /tasks/by-status/{status} [get]
+// .
 func (t *TaskController) GetByStatus(c *gin.Context) {
 	status := c.Param("status")
 
@@ -326,6 +335,7 @@ func (t *TaskController) GetByStatus(c *gin.Context) {
 // @Failure 400 {object} dto.ResponseMap
 // @Failure 500 {object} dto.ResponseMap
 // @Router /tasks/by-priority/{priority} [get]
+// .
 func (t *TaskController) GetByPriority(c *gin.Context) {
 	priorityParam := c.Param("priority")
 	if priorityParam == "" {
