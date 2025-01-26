@@ -170,7 +170,6 @@ func (t *TaskRepo) GetTasksWithLogin(ctx context.Context) ([]TaskWithLogin, erro
 		var task TaskWithLogin
 		rowScanErr := rows.Scan(TaskWithLoginStruct.Addr(&task)...)
 		if rowScanErr != nil {
-			slog.Error("", rowScanErr)
 			return nil, rowScanErr
 		}
 		res = append(res, task)
@@ -197,7 +196,6 @@ func (t *TaskRepo) GetTasksWithLoginByUserID(ctx context.Context, userID int) ([
 		var task TaskWithLogin
 		rowScanErr := rows.Scan(TaskWithLoginStruct.Addr(&task)...)
 		if rowScanErr != nil {
-			slog.Error("", rowScanErr)
 			return nil, rowScanErr
 		}
 		res = append(res, task)
