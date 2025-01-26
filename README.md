@@ -1,5 +1,6 @@
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/romakorinenko/task-manager/tests.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/romakorinenko/task-manager)](https://goreportcard.com/report/github.com/romakorinenko/task-manager)
+[![Coverage Status](https://coveralls.io/repos/github/romakorinenko/task-manager/badge.svg?branch=create_task_manager)](https://coveralls.io/github/romakorinenko/task-manager?branch=create_task_manager)
 
 # Программа для управления задачами
 
