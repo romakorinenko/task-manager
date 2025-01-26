@@ -1,4 +1,4 @@
-[![Go](https://github.com/romakorinenko/task-manager/workflows/Go/badge.svg?branch=master)](https://github.com/romakorinenko/task-manager/actions)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/romakorinenko/task-manager/https%3A%2F%2Fgithub.com%2Fromakorinenko%2Ftask-manager%2Factions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/romakorinenko/task-manager)](https://goreportcard.com/report/github.com/romakorinenko/task-manager)
 
 # Программа для управления задачами
