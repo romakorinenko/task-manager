@@ -1,11 +1,12 @@
 package test
 
 import (
-	"github.com/gin-gonic/contrib/sessions"
-	"github.com/gin-gonic/gin"
 	"log"
 	"path"
 	"runtime"
+
+	"github.com/gin-gonic/contrib/sessions"
+	"github.com/gin-gonic/gin"
 )
 
 func SetUpTestRouter() *gin.Engine {

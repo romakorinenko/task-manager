@@ -72,18 +72,18 @@ func (t *TaskService) Create(ctx context.Context, priority int, title, descripti
 
 func (t *TaskService) Update(ctx context.Context,
 	title, description, status string,
-	priority, ID int,
+	priority, id int,
 ) error {
 	if title == "" || description == "" || status == "" || priority < 1 || priority > 4 {
 		return errs.BadReqErr{}
 	}
 
-	taskForUpdate, err := t.TaskRepository.GetByID(ctx, ID)
+	taskForUpdate, err := t.TaskRepository.GetByID(ctx, id)
 	if err != nil {
 		return errs.BadReqErr{}
 	}
 
-	taskForUpdate.ID = ID
+	taskForUpdate.ID = id
 	taskForUpdate.Title = title
 	taskForUpdate.Description = description
 	taskForUpdate.Priority = priority

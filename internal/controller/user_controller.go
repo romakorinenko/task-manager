@@ -46,6 +46,7 @@ func NewUserController(userService service.IUserService) *UserController {
 // @Success 302 {string} Redirected to /tasks
 // @Success 200 {object} dto.ResponseMap
 // @Router / [get]
+// .
 func (u *UserController) GetMainPage(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(constant.UserSessionKey)
@@ -69,6 +70,7 @@ func (u *UserController) GetMainPage(c *gin.Context) {
 // @Failure 401 {object} dto.ResponseMap
 // @Failure 500 {object} dto.ResponseMap
 // @Router /login [post]
+// .
 func (u *UserController) Login(c *gin.Context) {
 	username := c.PostForm("username")
 	password := c.PostForm("password")
@@ -101,6 +103,7 @@ func (u *UserController) Login(c *gin.Context) {
 // @Success 302 {string} Redirected to main page
 // @Failure 500 {object} dto.ResponseMap
 // @Router /logout [get]
+// .
 func (u *UserController) Logout(c *gin.Context) {
 	session := sessions.Default(c)
 	session.Delete(constant.UserSessionKey)
@@ -120,6 +123,7 @@ func (u *UserController) Logout(c *gin.Context) {
 // @Success 201 {object} dto.ResponseMap
 // @Failure 400 {object} dto.ResponseMap
 // @Router /users [post]
+// .
 func (u *UserController) Create(c *gin.Context) {
 	var newUser repository.User
 	if err := c.ShouldBindJSON(&newUser); err != nil {
@@ -148,6 +152,7 @@ func (u *UserController) Create(c *gin.Context) {
 // @Success 200 {object} dto.ResponseMap
 // @Failure 400 {object} dto.ResponseMap
 // @Router /users/{id}/block [put]
+// .
 func (u *UserController) Block(c *gin.Context) {
 	userID := c.Param("id")
 
@@ -166,6 +171,7 @@ func (u *UserController) Block(c *gin.Context) {
 // @Success 200 {array} repository.User "List of users"
 // @Failure 500 {object} dto.ResponseMap
 // @Router /users [get]
+// .
 func (u *UserController) GetAll(c *gin.Context) {
 	users := u.UserService.GetAll(c.Request.Context())
 	c.JSON(http.StatusOK, users)

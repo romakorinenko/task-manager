@@ -38,8 +38,10 @@ type TaskWithLogin struct {
 	UserLogin   string    `db:"login"`
 }
 
-var TaskStruct = sqlbuilder.NewStruct(new(Task))
-var TaskWithLoginStruct = sqlbuilder.NewStruct(new(TaskWithLogin))
+var (
+	TaskStruct          = sqlbuilder.NewStruct(new(Task))
+	TaskWithLoginStruct = sqlbuilder.NewStruct(new(TaskWithLogin))
+)
 
 type ITaskRepo interface {
 	Create(ctx context.Context, task *Task) (int, error)
@@ -154,7 +156,15 @@ func (t *TaskRepo) GetByUserLogin(ctx context.Context, userLogin string) ([]Task
 
 func (t *TaskRepo) GetTasksWithLogin(ctx context.Context) ([]TaskWithLogin, error) {
 	sb := sqlbuilder.NewSelectBuilder()
-	sql, _ := sb.Select("tasks.id", "tasks.title", "tasks.description", "tasks.priority", "tasks.status", "tasks.created_at", "tasks.updated_at", "users.login").
+	sql, _ := sb.Select("tasks.id",
+		"tasks.title",
+		"tasks.description",
+		"tasks.priority",
+		"tasks.status",
+		"tasks.created_at",
+		"tasks.updated_at",
+		"users.login",
+	).
 		From("tasks").
 		JoinWithOption(sqlbuilder.LeftJoin, "users", "tasks.user_id = users.id").
 		BuildWithFlavor(sqlbuilder.PostgreSQL)
@@ -179,7 +189,16 @@ func (t *TaskRepo) GetTasksWithLogin(ctx context.Context) ([]TaskWithLogin, erro
 
 func (t *TaskRepo) GetTasksWithLoginByUserID(ctx context.Context, userID int) ([]TaskWithLogin, error) {
 	sb := sqlbuilder.NewSelectBuilder()
-	sql, args := sb.Select("tasks.id", "tasks.title", "tasks.description", "tasks.priority", "tasks.status", "tasks.created_at", "tasks.updated_at", "users.login").
+	sql, args := sb.Select(
+		"tasks.id",
+		"tasks.title",
+		"tasks.description",
+		"tasks.priority",
+		"tasks.status",
+		"tasks.created_at",
+		"tasks.updated_at",
+		"users.login",
+	).
 		From(TasksTableName).
 		JoinWithOption(sqlbuilder.LeftJoin, "users", "tasks.user_id = users.id").
 		Where(sb.Equal("users.id", userID)).
