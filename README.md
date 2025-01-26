@@ -1,8 +1,7 @@
+[![Go](https://github.com/romakorinenko/task-manager/workflows/tests.yml/badge.svg?branch=master)](https://github.com/romakorinenko/task-manager/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/romakorinenko/task-manager)](https://goreportcard.com/report/github.com/romakorinenko/task-manager)
+
 # Программа для управления задачами
-[![Go](https://github.com/romakorinenko/task-manager/workflows/Go/badge.svg)](https://github.com/romakorinenko/task-manager/actions)
-
-[![Go Report](https://goreportcard.com/report/github.com/romakorinenko/task-manager)](https://goreportcard.com/report/github.com/romakorinenko/task-manager)
-
 
 ### Описание:
 Task Manager - это многопользовательский веб-сервис для ведения рабочих задач. В настоящий момент существует функционал 
